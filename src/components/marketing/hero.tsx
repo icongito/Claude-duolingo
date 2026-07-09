@@ -6,6 +6,7 @@ import { ArrowRight, Play, Flame, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Mascot } from "./mascot";
 import { ParticleField } from "./particle-field";
+import { PixelMountain } from "./pixel-mountain";
 
 export function Hero() {
   return (
@@ -24,14 +25,26 @@ export function Hero() {
               25 worlds · 600+ lessons · 100% free to start
             </div>
 
-            <h1 className="font-pixel text-4xl leading-[1.15] tracking-wide text-foreground sm:text-5xl lg:text-[3.4rem]">
-              Level up like a
-              <br />
-              <span className="text-gradient-orange">game.</span>
-              <br />
-              Ship code like a{" "}
-              <span className="text-gradient-orange">pro.</span>
-            </h1>
+            <div className="relative">
+              <PixelMountain
+                size={26}
+                color="#7A3D10"
+                className="absolute -top-3 left-40 opacity-70 sm:left-56"
+              />
+              <PixelMountain
+                size={18}
+                color="#FF7A1A"
+                className="absolute top-14 left-16 opacity-50"
+              />
+              <h1 className="font-pixel text-4xl leading-[1.15] tracking-wide text-foreground sm:text-5xl lg:text-[3.4rem]">
+                Level up like a
+                <br />
+                <span className="text-gradient-orange">game.</span>
+                <br />
+                Ship code like a{" "}
+                <span className="text-gradient-orange">pro.</span>
+              </h1>
+            </div>
 
             <p className="mt-6 max-w-xl text-lg text-muted-foreground">
               CodeQuest turns Claude Code, prompt engineering, React, Git, and

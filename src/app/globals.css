@@ -1,0 +1,288 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --radius: 0.875rem;
+
+  /* CodeQuest core palette */
+  --cq-bg: #0d0d0d;
+  --cq-bg-secondary: #171717;
+  --cq-card: #1f1f1f;
+  --cq-orange: #ff7a1a;
+  --cq-orange-soft: #ff9e3d;
+  --cq-gold: #ffc857;
+  --cq-text: #ffffff;
+  --cq-text-secondary: #bdbdbd;
+  --cq-border: rgba(255, 122, 26, 0.15);
+
+  /* shadcn-style semantic tokens (dark-mode-first product) */
+  --background: var(--cq-bg);
+  --foreground: var(--cq-text);
+
+  --card: var(--cq-card);
+  --card-foreground: var(--cq-text);
+
+  --popover: var(--cq-card);
+  --popover-foreground: var(--cq-text);
+
+  --primary: var(--cq-orange);
+  --primary-foreground: #1a0d02;
+
+  --secondary: var(--cq-bg-secondary);
+  --secondary-foreground: var(--cq-text);
+
+  --muted: var(--cq-bg-secondary);
+  --muted-foreground: var(--cq-text-secondary);
+
+  --accent: var(--cq-gold);
+  --accent-foreground: #241703;
+
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+
+  --success: #3ddc97;
+  --info: #4fb2ff;
+
+  --border: var(--cq-border);
+  --input: rgba(255, 122, 26, 0.22);
+  --ring: var(--cq-orange);
+
+  --xp: var(--cq-orange-soft);
+  --gold: var(--cq-gold);
+  --gem: #6ee3ff;
+  --streak: #ff5757;
+
+  --chart-1: var(--cq-orange);
+  --chart-2: var(--cq-gold);
+  --chart-3: #6ee3ff;
+  --chart-4: #3ddc97;
+  --chart-5: #b78bff;
+}
+
+/* Product is dark-mode-first: :root already renders dark. A .light class
+   is provided for users/marketing surfaces that opt into a light theme. */
+.light {
+  --background: #faf7f2;
+  --foreground: #171717;
+  --card: #ffffff;
+  --card-foreground: #171717;
+  --popover: #ffffff;
+  --popover-foreground: #171717;
+  --secondary: #f1ede6;
+  --secondary-foreground: #171717;
+  --muted: #f1ede6;
+  --muted-foreground: #6b6b6b;
+  --border: rgba(255, 122, 26, 0.25);
+  --input: rgba(255, 122, 26, 0.3);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-info: var(--info);
+
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-xp: var(--xp);
+  --color-gold: var(--gold);
+  --color-gem: var(--gem);
+  --color-streak: var(--streak);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --font-sans: var(--font-sora);
+  --font-display: var(--font-space-grotesk);
+  --font-mono: var(--font-jetbrains-mono);
+  --font-pixel: var(--font-pixel-sans);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 10px);
+
+  --animate-glow-pulse: glow-pulse 2.4s ease-in-out infinite;
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-shimmer: shimmer 2.5s linear infinite;
+  --animate-pop-in: pop-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  --animate-node-pulse: node-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes glow-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 0 rgba(255, 122, 26, 0.35),
+      0 0 20px 2px rgba(255, 122, 26, 0.25);
+  }
+  50% {
+    box-shadow:
+      0 0 0 6px rgba(255, 122, 26, 0),
+      0 0 32px 6px rgba(255, 122, 26, 0.45);
+  }
+}
+
+@keyframes node-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(255, 122, 26, 0.5);
+  }
+  50% {
+    transform: scale(1.06);
+    box-shadow: 0 0 0 10px rgba(255, 122, 26, 0);
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes pop-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.85) translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html {
+    color-scheme: dark;
+  }
+
+  html.light {
+    color-scheme: light;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    background-image:
+      radial-gradient(
+        ellipse 80% 50% at 50% -10%,
+        rgba(255, 122, 26, 0.12),
+        transparent
+      ),
+      radial-gradient(
+        ellipse 60% 40% at 100% 0%,
+        rgba(255, 200, 87, 0.06),
+        transparent
+      );
+    background-attachment: fixed;
+  }
+
+  ::selection {
+    background: rgba(255, 122, 26, 0.35);
+    color: #fff;
+  }
+
+  /* Respect reduced-motion preferences everywhere */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer utilities {
+  .glass {
+    background: color-mix(in oklab, var(--card) 55%, transparent);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+
+  .glow-border {
+    border: 1px solid var(--border);
+    box-shadow:
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.03),
+      0 0 0 1px rgba(255, 122, 26, 0.04);
+  }
+
+  /* Bolder, more visible outline for quest/level cards — matches the
+     reference's chunky, clearly-stroked card treatment. */
+  .glow-border-strong {
+    border: 1.5px solid rgba(255, 122, 26, 0.45);
+    box-shadow:
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.04),
+      0 0 0 1px rgba(255, 122, 26, 0.08),
+      0 12px 32px -12px rgba(255, 122, 26, 0.25);
+  }
+
+  .text-gradient-orange {
+    background: linear-gradient(
+      90deg,
+      var(--cq-orange) 0%,
+      var(--cq-gold) 100%
+    );
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+  }
+
+  .bg-shimmer {
+    background: linear-gradient(
+      110deg,
+      transparent 40%,
+      rgba(255, 255, 255, 0.12) 50%,
+      transparent 60%
+    );
+    background-size: 200% 100%;
+  }
+
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 122, 26, 0.35) transparent;
+  }
+}

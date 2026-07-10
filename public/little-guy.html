@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Little Guy — Sprite Set</title>
+<style>
+  :root{ --bg:#F5F1EA; --ink:#1a1714; --clay:#D9755A; --glow:#FF7A1A; --hover:#ffffff; }
+  :root[data-theme="dark"]{ --bg:#0D0D0D; --ink:#F0EDE8; --hover:#1F1F1F; }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%;overflow:hidden}
+  body{background:var(--bg);font-family:"Courier New",ui-monospace,monospace;color:var(--ink);
+       display:flex;flex-direction:column}
+  #stage{flex:1;display:flex;align-items:center;justify-content:center;min-height:0}
+  canvas{image-rendering:pixelated;image-rendering:crisp-edges}
+  .top{display:flex;justify-content:space-between;align-items:center;padding:16px 20px 0;font-size:12px;
+       font-weight:bold;letter-spacing:.22em;text-transform:uppercase}
+  .top .name span{color:var(--clay)}
+  .top .right{display:flex;align-items:center;gap:14px}
+  .top .anim{color:var(--glow)}
+  .bar{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;padding:0 16px 18px}
+  button{
+    font-family:inherit;font-size:10px;font-weight:bold;letter-spacing:.12em;text-transform:uppercase;
+    background:var(--bg);color:var(--ink);border:2px solid var(--ink);
+    padding:9px 12px;cursor:pointer;box-shadow:3px 3px 0 var(--ink);
+    transition:transform .06s, box-shadow .06s;
+  }
+  button:hover{background:var(--hover)}
+  button:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
+  button.on{background:var(--clay);color:#fff}
+  button.mini{padding:6px 10px;box-shadow:2px 2px 0 var(--ink)}
+  @media (prefers-reduced-motion: reduce){
+    button{transition:none}
+  }
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="name">little guy<span> &#9632; </span>sprite set</div>
+  <div class="right">
+    <div class="anim" id="animName"></div>
+    <button class="mini" id="themeBtn">dark</button>
+  </div>
+</div>
+<div id="stage"><canvas id="c"></canvas></div>
+<div class="bar" id="bar"></div>
+
+<script>
+(() => {
+// ---------- palette ----------
+// Constant across themes: the guy and his props.
+const BODY='#D9755A', INK='#141414', GLOW='#FF7A1A', GOLD='#F2B33D', GOLD2='#FFD873',
+      DARKBODY='#2E2A25',
+      WOOD='#B07A44', WOOD_D='#8A5D2E', WOOD_L='#C89457', METAL='#4A3D30';
+
+// Theme-dependent scenery colors, reassigned by applyTheme().
+let BG, SAND, BEAM, SMOKE, RAIN, BUBBLE, DOT_ON, BG_DIM, SAND_DIM;
+
+const THEMES={
+  light:{
+    BG:'#F5F1EA', SAND:'#DDD6C7', BEAM:'#FFE9B8', SMOKE:'#A8A198', RAIN:'#AEB8C0',
+    BUBBLE:'#FFFFFF', DOT_ON:'#141414',
+    BG_DIM:['#F5F1EA','#CFC7BB','#8F877C','#3A342E'],
+    SAND_DIM:['#DDD6C7','#BBB2A2','#7C7468','#2E2A25'],
+  },
+  dark:{
+    BG:'#0D0D0D', SAND:'#2A2521', BEAM:'#3A2D14', SMOKE:'#57524A', RAIN:'#46525C',
+    BUBBLE:'#262220', DOT_ON:'#F5F1EA',
+    BG_DIM:['#0D0D0D','#090909','#040404','#000000'],
+    SAND_DIM:['#2A2521','#211D19','#171412','#0D0D0D'],
+  },
+};
+let theme='light';
+function applyTheme(mode){
+  theme=mode;
+  const t=THEMES[mode];
+  ({BG,SAND,BEAM,SMOKE,RAIN,BUBBLE}=t);
+  DOT_ON=t.DOT_ON; BG_DIM=t.BG_DIM; SAND_DIM=t.SAND_DIM;
+  document.documentElement.dataset.theme=mode;
+  themeBtn.textContent = mode==='dark' ? 'light' : 'dark';
+  try{localStorage.setItem('lg-theme',mode);}catch(e){}
+}
+
+// ---------- canvas / grid ----------
+const GW=64, GH=48, FPS=10, FRAME_MS=1000/FPS;
+const cv=document.getElementById('c'), ctx=cv.getContext('2d');
+const stage=document.getElementById('stage');
+let S=8;
+function fit(){
+  S=Math.max(3, Math.floor(Math.min(stage.clientWidth/GW, stage.clientHeight/GH)));
+  cv.width=GW*S; cv.height=GH*S;
+}
+// Re-fit whenever the stage's box changes (first layout, bar buttons
+// appearing, window resizes) — sizing once at parse time overflows the stage.
+new ResizeObserver(fit).observe(stage);
+fit();
+const px=(x,y,c,w=1,h=1)=>{ctx.fillStyle=c;ctx.fillRect(x*S,y*S,w*S,h*S);};
+
+// deterministic pseudo-random
+const R=(i,s=0)=>{const v=Math.sin(i*127.1+s*311.7)*43758.5453;return v-Math.floor(v);};
+
+// ---------- 3x5 pixel font ----------
+const FONT={
+'+':['...','.#.','###','.#.','...'],'2':['###','..#','###','#..','###'],
+'0':['###','#.#','#.#','#.#','###'],'X':['#.#','#.#','.#.','#.#','#.#'],
+'P':['###','#.#','###','#..','#..'],'L':['#..','#..','#..','#..','###'],
+'V':['#.#','#.#','#.#','#.#','.#.'],'U':['#.#','#.#','#.#','#.#','###'],
+' ':['...','...','...','...','...']};
+function text(str,x,y,c,sc=1){
+  let cx=x;
+  for(const ch of str){
+    const g=FONT[ch]; if(!g){cx+=4*sc;continue;}
+    for(let r=0;r<5;r++)for(let q=0;q<3;q++)
+      if(g[r][q]==='#') px(cx+q*sc,y+r*sc,c,sc,sc);
+    cx+=4*sc;
+  }
+}
+const textW=(str,sc=1)=>str.length*4*sc-sc;
+
+// ---------- the guy ----------
+// Reference build: body 16 cells wide (x24..39), FOUR legs, feet on y=40.
+function guyCells(p={}){
+  const {dy=0,sq=0,st=0,eyes='normal',eDx=0,eDy=0,armL='down',armR='down',
+         legUp=[0,0,0,0],dangle=false,poke=false}=p;
+  const C=[];
+  const add=(x,y,w=1,h=1,c=BODY)=>{for(let i=0;i<w;i++)for(let j=0;j<h;j++)C.push([x+i,y+j,c]);};
+  const capY=26+dy+sq-st;
+  add(26,capY,12,2);                       // head cap
+  add(24,capY+2,16,33+dy-(capY+2)+1);      // main body
+  // arms
+  const armY=30+dy;
+  const arm=(side,mode)=>{
+    if(mode==='down') side<0? add(20,armY,4,2):   add(40,armY,4,2);
+    if(mode==='sag')  side<0? add(20,armY+1,4,2): add(40,armY+1,4,2);
+    if(mode==='up')   side<0? add(22,armY-5,2,5): add(40,armY-5,2,5);
+    if(mode==='boxer')side<0? add(22,armY-3,2,3): add(40,armY-3,2,3);
+  };
+  arm(-1,armL); arm(1,armR);
+  if(poke){add(40,armY,4,2);add(44,armY,2,2);}
+  // four legs, matching the reference sheet: edge pair + inner pair
+  [[24,0],[28,1],[34,2],[38,3]].forEach(([lx,i])=>{
+    const hang=dangle?(i%2):0;
+    add(lx,34+dy-legUp[i]+hang,2,6-hang);
+  });
+  // eyes
+  const ex1=27+eDx, ex2=35+eDx, ey=29+dy+sq-st+eDy;
+  const eye=(ex)=>{
+    switch(eyes){
+      case 'normal': add(ex,ey,2,2,INK); break;
+      case 'closed': add(ex,ey+1,2,1,INK); break;
+      case 'slit':   add(ex-1,ey+1,3,1,INK); break;
+      case 'happy':  add(ex-1,ey,3,1,INK); add(ex-1,ey+1,1,1,INK); add(ex+1,ey+1,1,1,INK); break;
+      case 'x':      [[0,0],[2,0],[1,1],[0,2],[2,2]].forEach(([a,b])=>add(ex-1+a,ey+b,1,1,INK)); break;
+      case 'flame':  add(ex,ey-1,1,1,GLOW); add(ex,ey,2,1,GLOW); add(ex,ey+1,2,1,GOLD); break;
+      case 'coin':   add(ex-1,ey,3,2,GOLD); add(ex,ey,1,1,GOLD2); break;
+    }
+  };
+  eye(ex1); eye(ex2);
+  return C;
+}
+function blit(cells,ox=0,oy=0,recolor=null){
+  for(const [x,y,c] of cells) px(x+ox,y+oy, recolor?recolor(c):c);
+}
+function blitScaled(cells,ox,oy,scale,cx,cy,recolor){
+  for(const [x,y,c] of cells)
+    px(cx+(x-cx)*scale+ox, cy+(y-cy)*scale+oy, recolor?recolor(c):c, scale, scale);
+}
+
+// ---------- shared sprites ----------
+function ground(dim=0){
+  px(12,40,SAND_DIM[dim],40,2);
+  px(8,40,SAND_DIM[dim],2,1); px(54,40,SAND_DIM[dim],2,1);
+}
+function flame(cx,topY,fi,size=2){
+  if(size<=0) return;
+  const shapes=[
+    [[1,0],[0,1],[1,1],[2,1],[0,2],[1,2],[2,2]],
+    [[1,-1],[1,0],[2,0],[0,1],[1,1],[2,1],[0,2],[1,2],[2,2]],
+    [[0,0],[1,0],[0,1],[1,1],[2,1],[0,2],[1,2],[2,2]]
+  ][fi%3];
+  for(const [a,b] of shapes) px(cx-1+a,topY+b,GLOW);
+  px(cx,topY+2,GOLD);
+  if(size===1){px(cx,topY+1,BG); px(cx+1,topY,BG);}
+}
+function heart(cx,cy,c=GLOW){
+  const g=['.#.#.','#####','.###.','..#..'];
+  for(let r=0;r<4;r++)for(let q=0;q<5;q++) if(g[r][q]==='#') px(cx-2+q,cy+r,c);
+}
+// engulfing flame: dilated silhouette + flickering tongues, guy drawn on top
+function engulf(cells,f){
+  const key=(x,y)=>y*64+x;
+  const sil=new Set(cells.map(([x,y])=>key(x,y)));
+  const dilate=(src)=>{
+    const out=new Set(src);
+    for(const k of src){
+      const x=k%64, y=(k-x)/64;
+      if(x<63) out.add(key(x+1,y));
+      if(x>0)  out.add(key(x-1,y));
+      out.add(key(x,y+1)); if(y>0) out.add(key(x,y-1));
+    }
+    return out;
+  };
+  const inner=dilate(sil), outer=dilate(inner);
+  const draw=(set,c)=>{for(const k of set){const x=k%64,y=(k-x)/64; if(y<=39)px(x,y,c);}};
+  draw(outer,GLOW); draw(inner,GOLD);
+  // tongues licking upward off the top edge
+  const topOf={};
+  for(const k of outer){const x=k%64,y=(k-x)/64; if(!(x in topOf)||y<topOf[x]) topOf[x]=y;}
+  for(const xs in topOf){
+    const x=+xs, h=1+Math.floor(R(x*7,f)*4);
+    for(let j=1;j<=h;j++) px(x,topOf[x]-j, j===h?GOLD:GLOW);
+  }
+}
+
+// ---------- animations ----------
+// Each entry: name, len (frames at 10fps), draw(f), and `still` — the single
+// frame shown when the viewer prefers reduced motion.
+const A={};
+
+A.lesson={name:'Lesson complete',len:26,still:13,draw(f){
+  const hop=[0,-2,-4,-4,-2,0];
+  const dy=f<6?hop[f]:f<12?hop[f-6]:0;
+  for(const s of [2,8]) if(f>=s && f<s+12){
+    for(let i=0;i<14;i++){
+      const t=f-s, vx=(R(i,s)-.5)*3, vy=-(1.5+R(i,s+9)*2);
+      const x=32+Math.round(vx*t), y=30+Math.round(vy*t+.32*t*t);
+      if(y<42) px(x,y,i%2?GLOW:GOLD);
+    }
+  }
+  const air=dy<0;
+  blit(guyCells({dy,eyes:f<16?'happy':'normal',armL:air?'up':'down',armR:air?'up':'down'}));
+  if(f>=5&&f<20){
+    const sc=f<8?1:2, ty=18-Math.max(0,f-8);
+    text('+20 XP',32-Math.floor(textW('+20 XP',sc)/2),ty,GLOW,sc);
+  }
+}};
+
+A.streak={name:'Streak flame',len:34,still:20,draw(f){
+  const lift=f<8?(f%4<2?[2,0,0,2]:[0,2,2,0]):[0,0,0,0];
+  const pose={legUp:lift,st:f>=8?1:0,eyes:(f===8||f===9)?'flame':(f>=10?'slit':'normal')};
+  const cells=guyCells(pose);
+  if(f>=10) engulf(cells,f);          // fully engulfed, roaring
+  blit(cells);
+  if(f===8||f===9) flame(31,22,f,1);  // the first lick, before it takes
+}};
+
+A.boss={name:'Boss battle',len:40,still:39,draw(f){
+  for(let i=0;i<8;i++){
+    const x=Math.floor((R(i)*64+f*1.2))%64, y=8+Math.floor(R(i,4)*30);
+    px(x,y,SMOKE);
+  }
+  if(f>=6){
+    const bossY=Math.min(-18,-48+(f-6)*3);
+    blitScaled(guyCells({eyes:'normal'}),0,bossY,2,32,33,c=>c===INK?GLOW:DARKBODY);
+  }
+  const crouch=f>=2, boxer=f>=8, bounce=(f>=12&&(f%4>=2))?-1:0;
+  blit(guyCells({sq:crouch?2:0,dy:bounce,eyes:crouch?'slit':'normal',
+                 armL:boxer?'boxer':'down',armR:boxer?'boxer':'down'}));
+}};
+
+A.wrong={name:'Wrong answer',len:40,still:2,draw(f){
+  // heart cracks first, then he can't take it
+  if(f<4) heart(30,14);
+  else if(f<6){heart(30,14); px(30,14,BG); px(30,15,BG); px(29,16,BG);}
+  else if(f<14){
+    const d=f-6;
+    px(28-d,15+d+Math.floor(d*d*0.1),GLOW,2,2);
+    px(31+d,15+d+Math.floor(d*d*0.1),GLOW,2,2);
+  }
+  const ox=f===1?-2:f>=2?-3:0, dy=f===1?-2:0;
+  if(f<6){
+    blit(guyCells({dy,eyes:f>=2?'x':'normal'}),ox);
+  } else if(f<19){
+    // EXPLODE into particles
+    const t=f-6, cells=guyCells({eyes:'x'});
+    cells.forEach(([x,y,c],i)=>{
+      const dx=x-32, dyc=y-31;
+      const m=Math.max(1,Math.hypot(dx,dyc));
+      const vx=dx/m*(1.2+R(i)*2), vy=dyc/m*(1.2+R(i,2)*2)-(1+R(i,5)*2);
+      const nx=x+ox+Math.round(vx*t), ny=y+Math.round(vy*t+0.3*t*t);
+      if(t<7+R(i,9)*6 && ny<44 && nx>=0 && nx<64) px(nx,ny,c);
+    });
+  } else if(f>=25&&f<34){
+    // pieces drift back together
+    const k=1-Math.pow(1-(f-25)/8,3), cells=guyCells({eyes:'closed'});
+    cells.forEach(([x,y,c],i)=>{
+      const fx=x+(R(i)-.5)*44, fy=y-(6+R(i,3)*26);
+      px(Math.round(fx+(x-fx)*k), Math.round(fy+(y-fy)*k), c);
+    });
+  } else if(f>=34){
+    blit(guyCells({eyes:f<37?'closed':'normal'}));  // determined blink
+  }
+}};
+
+A.level={name:'Level up',len:46,still:44,draw(f){
+  if(f<38){
+    const w=Math.min(16,4+f*4);
+    px(32-w/2,0,BEAM,w,40);
+    px(30,0,GOLD2,4,40);
+  }
+  const rising=f>=3&&f<26;
+  const dy=rising?-Math.min(9,Math.floor((f-3)/2)):(f===26?-4:0);
+  const vib=rising?(f%2?1:-1):0;                    // vibrating in the beam
+  const shake=(f===27||f===28)?(f%2?2:-2):0;        // landing thud
+  blit(guyCells({dy,dangle:dy<0,eyes:rising?'closed':'happy'}),vib+shake);
+  if(f>=27){
+    // banner slams in: drops from above, overshoots one frame, settles
+    const by = f===27?2 : f===28?8 : 6;
+    text('LVL UP',32-Math.floor(textW('LVL UP',2)/2)+shake,by,GLOW,2);
+    for(let i=0;i<12;i++){
+      const y=Math.floor((R(i,7)*48+(f-27)*2.5))%46;
+      px(Math.floor(R(i)*60)+2,y,i%2?GOLD:GOLD2);
+    }
+  }
+}};
+
+A.idle={name:'Idle',len:48,still:2,draw(f){
+  const st=(f>=6&&f<16)?1:0;
+  const eyes=((f>=20&&f<22)||(f>=44&&f<46))?'closed':'normal';
+  const eDx=(f>=36&&f<40)?-1:(f>=40&&f<44)?1:0;
+  const tap=(f===30||f===32)?[1,0,0,0]:[0,0,0,0];
+  blit(guyCells({st,eyes,eDx,legUp:tap}));
+}};
+
+A.think={name:'Thinking',len:16,still:0,draw(f){
+  blit(guyCells({sq:1,eyes:'normal',eDx:-1,eDy:-1,
+                 armR:(f%4<2)?'down':'sag'}));
+  px(40,10,BUBBLE,14,8); px(41,9,BUBBLE,12,1); px(41,18,BUBBLE,12,1);
+  px(38,20,BUBBLE,2,2); px(36,23,BUBBLE,1,1);
+  const active=Math.floor(f/2)%3;
+  [0,1,2].forEach(i=>px(43+i*4,13,i===active?DOT_ON:SAND,2,2));
+}};
+
+A.chest={name:'Treasure chest',len:72,still:44,draw(f){
+  const open=f>=25;
+  // --- chest body (always) ---
+  px(49,34,WOOD,10,6);
+  px(49,36,WOOD_D,10,1); px(49,38,WOOD_D,10,1);   // plank seams
+  px(49,34,WOOD_L,10,1);                          // top edge highlight
+  if(!open){
+    // closed lid: wooden arch
+    px(51,30,WOOD_L,6,1);
+    px(50,31,WOOD,8,1);
+    px(49,32,WOOD,10,2);
+    px(49,33,WOOD_D,10,1);                        // lid/body seam shadow
+  } else {
+    // lid flung open above
+    px(51,24,WOOD_L,6,1);
+    px(50,25,WOOD,8,1);
+    px(49,26,WOOD,10,2);
+    px(49,28,WOOD_D,10,1);                        // dark underside
+    px(50,29,METAL,1,1); px(57,29,METAL,1,1);
+    // glowing interior + coin pile
+    px(50,33,GOLD2,8,2);
+    px(51,32,GOLD,2,1); px(54,32,GOLD,3,1); px(53,31,GOLD2,1,1);
+    if(f<30) for(let i=0;i<7;i++)                 // burst of light
+      px(50+i,29-Math.abs(i-3)-(f%2),GLOW,1,2+(f%2));
+  }
+  // metal straps + lock + rivets
+  const lidTop=open?24:30;
+  px(50,lidTop,METAL,1,open?5:10); px(57,lidTop,METAL,1,open?5:10);
+  if(open){px(50,34,METAL,1,6); px(57,34,METAL,1,6);}
+  px(52,open?33:32,GOLD,4,3);                     // lock plate
+  px(53,open?34:33,INK,1,1); px(53,open?35:34,INK,1,1); // keyhole
+  px(49,39,GOLD2,1,1); px(58,39,GOLD2,1,1);       // corner rivets
+  px(49,open?26:31,GOLD2,1,1); px(58,open?26:31,GOLD2,1,1);
+  // coins arcing out
+  if(open&&f<44) for(let i=0;i<6;i++){
+    const t=f-25-i; if(t<0||t>12) continue;
+    const x=53-Math.round((1+R(i)*1.6)*t), y=30-Math.round(2.2*t-0.28*t*t);
+    if(y<40){px(x,y,GOLD,2,2); px(x,y,GOLD2,1,1);}
+  }
+  // --- guy ---
+  const off=Math.min(4,-16+f);
+  const walking=off<4;
+  const dy=(f===26)?-2:(f===27)?-3:(f===28)?-1:0;  // jump-back arc
+  const back=(f>=26)?-6:0;
+  const eyes=(f===32||f===33)?'coin':(f>=34)?'happy':'normal';
+  blit(guyCells({
+    dy, eyes,
+    legUp:walking?(f%4<2?[2,0,0,2]:[0,2,2,0]):[0,0,0,0],
+    poke:(f>=22&&f<25),
+    armL:f>=34?'sag':'down', armR:f>=34?'sag':'down'
+  }), f>=26? off+back : off);
+  if(f>=32){
+    const gx=32+off+back;
+    px(gx-2,31,GOLD,4,4); px(gx-1,32,GOLD2,2,2);  // hugged below the eyes
+  }
+}};
+
+A.comeback={name:'Streak lost / comeback',len:56,still:50,draw(f){
+  // rain thins out and stops after the shake-off
+  const drops = f<24 ? 18 : f<34 ? Math.max(0, 18-(f-24)*2) : 0;
+  for(let i=0;i<drops;i++){
+    const x=Math.floor(R(i)*62)+1, y=Math.floor(R(i,3)*48+f*3)%46;
+    px(x,y,RAIN,1,2);
+  }
+  if(f<6) flame(31,21,f,1);
+  else if(f<8) flame(31,22,f,1);
+  else if(f<16) for(let i=0;i<4;i++){
+    const t=f-8;
+    px(30+Math.round((R(i)-.5)*2*t*.6), 21-t+i, SMOKE);
+  }
+  if(f>=32&&f<36&&f%2===0) px(31,21,GLOW);
+  if(f>=36) flame(31,21,f,1);
+  const wig=(f>=18&&f<22)?(f%2?1:-1):0;
+  const stomp=(f===25)?[2,2,2,2]:[0,0,0,0];
+  const dip=(f===26)?1:0;
+  const eyes=(f>=24&&f<32)?'slit':'normal';
+  blit(guyCells({eyes,eDy:f<18?1:0,legUp:stomp,dy:dip,
+                 armL:f<18?'sag':'down',armR:f<18?'sag':'down'}),wig);
+  if(f>=26&&f<29){px(24,39,SMOKE);px(39,39,SMOKE);}
+}};
+
+// ---------- UI + loop ----------
+const order=['lesson','streak','boss','wrong','level','idle','think','chest','comeback'];
+let cur='lesson', start=performance.now();
+const bar=document.getElementById('bar'), nameEl=document.getElementById('animName');
+const themeBtn=document.getElementById('themeBtn');
+order.forEach(k=>{
+  const b=document.createElement('button');
+  b.textContent=A[k].name; b.dataset.k=k;
+  b.onclick=()=>{cur=k; start=performance.now(); sync();};
+  bar.appendChild(b);
+});
+function sync(){
+  nameEl.textContent=A[cur].name;
+  [...bar.children].forEach(b=>b.classList.toggle('on',b.dataset.k===cur));
+}
+sync();
+
+themeBtn.onclick=()=>applyTheme(theme==='dark'?'light':'dark');
+let saved=null;
+try{saved=localStorage.getItem('lg-theme');}catch(e){}
+applyTheme(saved==='dark'||saved==='light' ? saved :
+  (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+
+// reduced motion: freeze each animation on a representative frame
+const rmq=matchMedia('(prefers-reduced-motion: reduce)');
+
+function loop(now){
+  requestAnimationFrame(loop);
+  const anim=A[cur];
+  const f = rmq.matches ? (anim.still ?? 0)
+                        : Math.floor((now-start)/FRAME_MS)%anim.len;
+  ctx.fillStyle=BG; ctx.fillRect(0,0,cv.width,cv.height);
+  let dim=0;
+  if(cur==='boss'){ dim=Math.min(3,Math.floor(f/5));
+    ctx.fillStyle=BG_DIM[dim]; ctx.fillRect(0,0,cv.width,cv.height); }
+  ground(dim);
+  anim.draw(f);
+}
+requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

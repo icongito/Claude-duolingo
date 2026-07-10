@@ -41,14 +41,26 @@ subscriptions, and admin/analytics.
 ## Project status
 
 - [x] Project scaffold (Next.js 15, TypeScript, Tailwind, tooling)
-- [x] Design system (dark-mode CodeQuest theme, UI primitives)
+- [x] Design system (dark-mode CodeQuest theme, pixel-art mascot, UI primitives)
 - [x] Database schema (Drizzle, 46 tables)
 - [x] Gamification data (25 worlds, 251 achievements, XP/level curve)
 - [x] Landing page
-- [ ] Auth pages & Supabase wiring
-- [ ] Dashboard
-- [ ] Learning map
-- [ ] Lessons, AI mentor, admin dashboard, and the rest of the spec
+- [x] Auth pages & Supabase wiring (email/password, magic link, OAuth, reset)
+- [x] App shell + dashboard (stats, streak, heatmap, weekly chart, daily challenge)
+- [x] Learning map (worlds overview + winding node maps with secrets & bosses)
+- [x] Lesson player (multiple choice, fill-blank, typing, matching, flashcards, sorting, Monaco code)
+- [x] Achievements gallery, leaderboard, profile
+- [x] Community (feed/friends/guilds), marketplace, notifications, settings
+- [x] AI Mentor (floating chat, Claude-backed via `ANTHROPIC_API_KEY`, demo fallback)
+- [x] Admin dashboard (KPIs, DAU chart, content/users/moderation)
+- [x] Tests (Vitest unit suites + Playwright smoke specs)
+
+The app runs in **demo mode** without any configuration: all app surfaces
+render from a typed demo-data layer (`src/lib/data/`). Connecting a real
+Supabase project (`.env.local`) enables live auth; the Drizzle schema and
+migrations are ready for persisting real progress.
+
+Run tests with `pnpm test` (unit) and `pnpm test:e2e` (Playwright).
 
 ## Design system
 

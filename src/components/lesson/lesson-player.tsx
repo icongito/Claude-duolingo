@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Heart, X, Zap } from "lucide-react";
+import { Heart, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { LittleGuy } from "@/components/mascot/little-guy";
 import type { LessonSession, LessonStep } from "@/lib/data/lessons";
 import { StepMultipleChoice } from "./step-multiple-choice";
 import { StepFillBlank } from "./step-fill-blank";
@@ -113,9 +114,7 @@ export function LessonPlayer({ session }: { session: LessonSession }) {
           transition={{ type: "spring", stiffness: 200, damping: 14 }}
           className="flex flex-col items-center gap-5"
         >
-          <span className="animate-glow-pulse flex size-24 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent text-primary-foreground">
-            <Zap className="size-12" />
-          </span>
+          <LittleGuy animation="lesson" size={220} />
           <h1 className="font-pixel text-3xl">Lesson complete!</h1>
           <p className="text-muted-foreground max-w-sm">
             {scorePct === 100
@@ -163,9 +162,7 @@ export function LessonPlayer({ session }: { session: LessonSession }) {
           animate={{ scale: 1, opacity: 1 }}
           className="flex flex-col items-center gap-5"
         >
-          <span className="flex size-24 items-center justify-center rounded-full border-2 border-destructive/50 bg-destructive/15 text-destructive">
-            <Heart className="size-12" />
-          </span>
+          <LittleGuy animation="wrong" size={220} />
           <h1 className="font-pixel text-3xl">Out of hearts</h1>
           <p className="text-muted-foreground max-w-sm">
             No XP lost — that&apos;s not how we roll. Take a breath and run it

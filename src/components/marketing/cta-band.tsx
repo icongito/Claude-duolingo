@@ -4,7 +4,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Mascot } from "./mascot";
+import { LittleGuy } from "@/components/mascot/little-guy";
 
 export function CtaBand() {
   return (
@@ -20,7 +20,7 @@ export function CtaBand() {
           <div className="absolute -top-16 -right-16 size-64 rounded-full bg-primary/20 blur-[100px]" />
           <div className="absolute -bottom-16 -left-16 size-64 rounded-full bg-accent/15 blur-[100px]" />
 
-          <Mascot size={110} className="relative" />
+          <LittleGuy animation="streak" size={160} crop className="relative" />
 
           <h2 className="font-pixel relative max-w-xl text-2xl text-foreground sm:text-3xl">
             Your streak starts today.

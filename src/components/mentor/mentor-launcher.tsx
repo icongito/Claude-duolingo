@@ -2,7 +2,8 @@
 
 import { useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Bot, Loader2, SendHorizonal, X } from "lucide-react";
+import { Bot, SendHorizonal, X } from "lucide-react";
+import { LittleGuy } from "@/components/mascot/little-guy";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -123,8 +124,11 @@ export function MentorLauncher() {
                   </div>
                 ))}
                 {pending && (
-                  <div className="bg-secondary text-muted-foreground flex items-center gap-2 self-start rounded-2xl rounded-bl-sm px-3.5 py-2.5 text-sm">
-                    <Loader2 className="size-3.5 animate-spin" /> thinking…
+                  <div className="flex items-end gap-1 self-start">
+                    <LittleGuy animation="think" size={96} />
+                    <span className="text-muted-foreground pb-2 text-xs">
+                      thinking…
+                    </span>
                   </div>
                 )}
               </div>

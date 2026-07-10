@@ -4,7 +4,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowRight, Play, Flame, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Mascot } from "./mascot";
+import { LittleGuy } from "@/components/mascot/little-guy";
 import { ParticleField } from "./particle-field";
 import { PixelMountain } from "./pixel-mountain";
 
@@ -97,7 +97,7 @@ export function Hero() {
           >
             <div className="absolute inset-0 rounded-full bg-primary/20 blur-[80px]" />
             <div className="glow-border-strong glass relative flex w-full flex-col items-center gap-4 rounded-2xl p-8">
-              <Mascot size={180} />
+              <LittleGuy animation="idle" size={230} withGround crop />
               <div className="glow-border-strong rounded-xl bg-card px-4 py-2 text-center text-sm font-semibold">
                 Ready to level up your AI skills?
               </div>

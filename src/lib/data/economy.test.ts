@@ -1,11 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
+  AD_REVENUE_PER_FREE_USER_USD,
   CONSUMABLES,
   GEM_PACKS,
+  MENTOR_COST_CEILING_PCT,
+  mentorCostPerMessage,
   PLANS,
   QUESTS,
   WEARABLES,
   WEEKLY_GEM_CAP,
+  worstCaseMentorMonthlyCost,
 } from "./economy";
 
 describe("economy invariants", () => {
@@ -46,6 +50,38 @@ describe("economy invariants", () => {
     for (const p of PLANS.filter((p) => p.monthlyPrice > 0)) {
       expect(p.yearlyPrice).toBeLessThan(p.monthlyPrice);
     }
+  });
+
+  it("mentor caps are cost-based: worst-case API spend stays under tier revenue", () => {
+    for (const plan of PLANS.filter((p) => p.monthlyPrice > 0)) {
+      const worstCase = worstCaseMentorMonthlyCost(plan);
+      // Even billed yearly (the cheaper rate), a cap-maxing user can't burn
+      // more than the ceiling share of what they pay.
+      expect(worstCase).toBeLessThanOrEqual(
+        plan.yearlyPrice * MENTOR_COST_CEILING_PCT + 1e-9,
+      );
+    }
+  });
+
+  it("free tier mentor budget is covered by assumed ad revenue", () => {
+    const free = PLANS.find((p) => p.id === "free")!;
+    expect(free.showsAds).toBe(true);
+    expect(worstCaseMentorMonthlyCost(free)).toBeLessThanOrEqual(
+      AD_REVENUE_PER_FREE_USER_USD,
+    );
+    // Paid tiers never show ads — that's part of what they buy.
+    for (const plan of PLANS.filter((p) => p.monthlyPrice > 0)) {
+      expect(plan.showsAds).toBe(false);
+    }
+  });
+
+  it("paid tiers use the smarter (pricier) mentor model with bigger budgets", () => {
+    const [free, premium, plus] = PLANS;
+    expect(mentorCostPerMessage(premium.mentorModelId)).toBeGreaterThan(
+      mentorCostPerMessage(free.mentorModelId),
+    );
+    expect(premium.mentorDailyMessages).toBeGreaterThan(free.mentorDailyMessages);
+    expect(plus.mentorDailyMessages).toBeGreaterThan(premium.mentorDailyMessages);
   });
 
   it("gem packs scale value with size and have unique ids", () => {

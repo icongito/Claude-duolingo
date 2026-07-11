@@ -17,6 +17,51 @@ export const WEEKLY_GEM_CAP = 25;
 
 export type PlanId = "free" | "premium" | "premium_plus";
 
+/* ------------------------- mentor unit economics -------------------------- */
+
+/**
+ * Claude API list pricing (USD per million tokens) and the token profile of a
+ * typical mentor exchange. Mentor caps below are DERIVED from these numbers —
+ * `economy.test.ts` asserts that a user who maxes their cap every day of the
+ * month can never cost more than `MENTOR_COST_CEILING_PCT` of what they pay
+ * (ads revenue, for the free tier). Change a price or a cap and the test
+ * tells you whether the tier still makes money.
+ */
+export const MENTOR_MODELS = {
+  "claude-haiku-4-5-20251001": { label: "Fast mentor", inPerMTok: 1, outPerMTok: 5 },
+  // Sonnet 5 standard pricing ($2/$10 intro runs through 2026-08-31; budget
+  // on the standard rate so the tiers stay profitable after it ends).
+  "claude-sonnet-5": { label: "Smart mentor", inPerMTok: 3, outPerMTok: 15 },
+} as const;
+
+export type MentorModelId = keyof typeof MENTOR_MODELS;
+
+/** ~150-token system prompt + sliced history in; max_tokens 600 out. */
+export const MENTOR_TOKENS_PER_MESSAGE = { input: 1200, output: 300 };
+
+/** Worst-case mentor spend may consume at most this share of tier revenue. */
+export const MENTOR_COST_CEILING_PCT = 0.75;
+
+/**
+ * Conservative ads ARPU assumption for a daily-active free user (one house/
+ * network ad card after lessons). This is what funds the free mentor budget.
+ */
+export const AD_REVENUE_PER_FREE_USER_USD = 1.0;
+
+export function mentorCostPerMessage(model: MentorModelId): number {
+  const p = MENTOR_MODELS[model];
+  return (
+    (MENTOR_TOKENS_PER_MESSAGE.input * p.inPerMTok +
+      MENTOR_TOKENS_PER_MESSAGE.output * p.outPerMTok) /
+    1_000_000
+  );
+}
+
+/** A cap-maxing user, 30 days straight — the number the caps are sized to. */
+export function worstCaseMentorMonthlyCost(plan: SubscriptionPlan): number {
+  return mentorCostPerMessage(plan.mentorModelId) * plan.mentorDailyMessages * 30;
+}
+
 export type SubscriptionPlan = {
   id: PlanId;
   name: string;
@@ -26,9 +71,10 @@ export type SubscriptionPlan = {
   /** USD per month when billed yearly. */
   yearlyPrice: number;
   highlight: boolean;
+  showsAds: boolean;
   monthlyGemStipend: number;
-  mentorModel: string;
-  mentorDailyMessages: number | "unlimited";
+  mentorModelId: MentorModelId;
+  mentorDailyMessages: number;
   features: string[];
 };
 
@@ -40,8 +86,10 @@ export const PLANS: SubscriptionPlan[] = [
     monthlyPrice: 0,
     yearlyPrice: 0,
     highlight: false,
+    showsAds: true,
     monthlyGemStipend: 0,
-    mentorModel: "Fast mentor",
+    // Haiku @ $0.0027/msg → 10/day worst case = $0.81/mo, covered by ads.
+    mentorModelId: "claude-haiku-4-5-20251001",
     mentorDailyMessages: 10,
     features: [
       "All 25 worlds and every lesson",
@@ -49,6 +97,7 @@ export const PLANS: SubscriptionPlan[] = [
       "3 hearts, refilled daily",
       "AI Mentor: 10 messages/day (fast model)",
       "Earn gems through quests and boss battles",
+      "Ad-supported — a short ad card after lessons",
     ],
   },
   {
@@ -58,15 +107,18 @@ export const PLANS: SubscriptionPlan[] = [
     monthlyPrice: 6.99,
     yearlyPrice: 4.99,
     highlight: true,
+    showsAds: false,
     monthlyGemStipend: 30,
-    mentorModel: "Smart mentor",
-    mentorDailyMessages: 200,
+    // Sonnet @ $0.0081/msg → 15/day worst case = $3.65/mo, under 75% of
+    // even the yearly rate ($4.99).
+    mentorModelId: "claude-sonnet-5",
+    mentorDailyMessages: 15,
     features: [
-      "Everything in Free",
+      "Everything in Free — minus the ads",
       "Unlimited hearts — mistakes cost nothing",
       "One free streak repair every month",
       "30 gems/month stipend",
-      "AI Mentor: 200 messages/day (smarter model)",
+      "AI Mentor: 15 messages/day on the smart model",
       "Offline lessons on mobile",
     ],
   },
@@ -77,12 +129,15 @@ export const PLANS: SubscriptionPlan[] = [
     monthlyPrice: 12.99,
     yearlyPrice: 9.99,
     highlight: false,
+    showsAds: false,
     monthlyGemStipend: 60,
-    mentorModel: "Smart mentor",
-    mentorDailyMessages: "unlimited",
+    // Sonnet @ $0.0081/msg → 30/day worst case = $7.29/mo, under 75% of
+    // even the yearly rate ($9.99).
+    mentorModelId: "claude-sonnet-5",
+    mentorDailyMessages: 30,
     features: [
       "Everything in Premium",
-      "Unlimited AI Mentor messages",
+      "2× Premium's mentor budget: 30 smart-model messages/day",
       "60 gems/month stipend",
       "Exclusive seasonal wearable drop for Little Guy",
       "One weekly quest reroll",

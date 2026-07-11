@@ -48,10 +48,7 @@ export default function BillingPage() {
           <li>Unlimited hearts</li>
           <li>1 free streak repair / month</li>
           <li>{plan.monthlyGemStipend} gems monthly stipend</li>
-          <li>
-            Mentor: {plan.mentorDailyMessages === "unlimited" ? "unlimited" : `${plan.mentorDailyMessages}/day`}{" "}
-            ({plan.mentorModel.toLowerCase()})
-          </li>
+          <li>Mentor: {plan.mentorDailyMessages}/day (smart model)</li>
         </ul>
         <div className="flex flex-wrap gap-3">
           <Button asChild>

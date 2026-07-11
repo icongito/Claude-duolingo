@@ -23,8 +23,12 @@ const FAQ = [
     a: "Yes. Cancel from Settings → Billing and you keep Premium until the end of the paid period. No partial-month clawbacks, no retention maze.",
   },
   {
-    q: "What's the difference between the mentor models?",
-    a: "Free uses a fast model good for quick hints. Premium tiers use a smarter model with deeper reasoning for tricky debugging conversations, plus much higher daily message limits.",
+    q: "What's the difference between the mentor models, and why the daily caps?",
+    a: "Free uses a fast model good for quick hints; Premium tiers use a smarter model with deeper reasoning for tricky debugging conversations. The caps are honest economics: every mentor message costs us a real AI-model fee, so each tier's daily budget is sized so that even someone who maxes it every single day costs less than their plan (or, on Free, less than the ads bring in). Most learners use a fraction of it.",
+  },
+  {
+    q: "Why does the free tier have ads?",
+    a: "The free tier is genuinely the whole game, and servers plus AI mentors aren't free. One small ad card after lessons pays for your hearts, your mentor messages, and the lights. Any paid plan removes ads entirely.",
   },
 ];
 

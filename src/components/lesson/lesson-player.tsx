@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Heart, X } from "lucide-react";
+import { AdCard } from "@/components/ads/ad-card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { LittleGuy } from "@/components/mascot/little-guy";
@@ -149,6 +150,8 @@ export function LessonPlayer({ session }: { session: LessonSession }) {
               <Link href="/dashboard">Dashboard</Link>
             </Button>
           </div>
+          {/* Free tier: the ad slot that pays for the free mentor budget. */}
+          <AdCard seed={session.nodeId.length} />
         </motion.div>
       </div>
     );

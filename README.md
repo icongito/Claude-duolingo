@@ -55,12 +55,22 @@ subscriptions, and admin/analytics.
 - [x] Admin dashboard (KPIs, DAU chart, content/users/moderation)
 - [x] Tests (Vitest unit suites + Playwright smoke specs)
 
+- [x] PWA: web manifest, mascot icon set, service worker with branded offline page
+- [x] Play Store packaging: TWA config (`twa-manifest.json`), digital asset links, launch runbook
+- [x] CI: GitHub Actions (lint, typecheck, tests, build)
+
 The app runs in **demo mode** without any configuration: all app surfaces
 render from a typed demo-data layer (`src/lib/data/`). Connecting a real
 Supabase project (`.env.local`) enables live auth; the Drizzle schema and
 migrations are ready for persisting real progress.
 
 Run tests with `pnpm test` (unit) and `pnpm test:e2e` (Playwright).
+
+## Launching
+
+**[docs/LAUNCH.md](docs/LAUNCH.md)** is the full runbook for shipping to the
+web (Vercel) and Google Play (Trusted Web Activity via Bubblewrap) at the
+same time — one codebase, both storefronts.
 
 ## Design system
 

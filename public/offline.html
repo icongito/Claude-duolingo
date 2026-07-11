@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Offline — CodeQuest</title>
+<style>
+  :root{color-scheme:dark}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:20px;background:#0D0D0D;color:#fff;text-align:center;padding:24px;
+    font-family:"Courier New",ui-monospace,monospace;
+  }
+  canvas{image-rendering:pixelated;width:180px;height:105px}
+  h1{font-size:22px;letter-spacing:.12em;text-transform:uppercase}
+  p{color:#BDBDBD;font-size:14px;max-width:340px;line-height:1.6}
+  button{
+    font-family:inherit;font-size:12px;font-weight:bold;letter-spacing:.15em;text-transform:uppercase;
+    background:#FF7A1A;color:#1a0d02;border:none;border-radius:12px;
+    padding:14px 26px;cursor:pointer;
+  }
+  button:active{transform:translateY(1px)}
+</style>
+</head>
+<body>
+<canvas id="c" width="24" height="14" aria-hidden="true"></canvas>
+<h1>You&rsquo;re offline</h1>
+<p>Little Guy can&rsquo;t reach the server right now. Your streak is safe &mdash; reconnect and pick up where you left off.</p>
+<button onclick="location.reload()">Try again</button>
+<script>
+// Static Little Guy (sad pose) drawn at 1px cells, CSS-scaled.
+const ctx = document.getElementById('c').getContext('2d');
+const BODY='#D9755A', INK='#141414';
+const fill=(x,y,w,h,c)=>{ctx.fillStyle=c;ctx.fillRect(x,y,w,h);};
+fill(6,1,12,2,BODY);          // head cap (dropped 1: he's sad)
+fill(4,3,16,6,BODY);          // body
+fill(0,6,4,2,BODY);           // sagging arms
+fill(20,6,4,2,BODY);
+[4,8,14,18].forEach(x=>fill(x,9,2,5,BODY)); // four legs
+fill(7,5,2,1,INK);            // closed eyes
+fill(15,5,2,1,INK);
+</script>
+</body>
+</html>

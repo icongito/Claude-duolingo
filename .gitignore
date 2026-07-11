@@ -40,3 +40,13 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# android packaging (bubblewrap output — keystore must never be committed)
+android.keystore
+*.aab
+*.apk
+/build-output
+
+# playwright
+/test-results
+/playwright-report

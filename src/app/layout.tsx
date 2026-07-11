@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Sora, Space_Grotesk, JetBrains_Mono, Pixelify_Sans } from "next/font/google";
 import { Providers } from "@/components/providers";
 import { Toaster } from "@/components/ui/sonner";
+import { SwRegister } from "@/components/pwa/sw-register";
 import "./globals.css";
 
 const sora = Sora({
@@ -38,13 +39,27 @@ export const metadata: Metadata = {
   },
   description:
     "CodeQuest is the addictive, Duolingo-style way to master Claude Code, AI development, and modern software engineering — one glowing lesson at a time.",
-  metadataBase: new URL("https://codequest.dev"),
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL ?? "https://codequest.dev",
+  ),
   openGraph: {
     title: "CodeQuest — Level Up as a Developer",
     description:
       "Learn Claude Code, prompt engineering, React, Git, and more through bite-sized, gamified lessons.",
     siteName: "CodeQuest",
     type: "website",
+  },
+  icons: {
+    icon: [
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: "/icons/apple-touch-icon.png",
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "CodeQuest",
   },
 };
 
@@ -70,6 +85,7 @@ export default function RootLayout({
           {children}
           <Toaster />
         </Providers>
+        <SwRegister />
       </body>
     </html>
   );

@@ -1,0 +1,45 @@
+{
+  "packageId": "dev.codequest.app",
+  "host": "codequest.dev",
+  "name": "CodeQuest",
+  "launcherName": "CodeQuest",
+  "display": "standalone",
+  "themeColor": "#0D0D0D",
+  "navigationColor": "#0D0D0D",
+  "navigationColorDark": "#0D0D0D",
+  "navigationDividerColor": "#0D0D0D",
+  "navigationDividerColorDark": "#0D0D0D",
+  "backgroundColor": "#0D0D0D",
+  "enableNotifications": true,
+  "startUrl": "/dashboard",
+  "iconUrl": "https://codequest.dev/icons/icon-512.png",
+  "maskableIconUrl": "https://codequest.dev/icons/icon-maskable-512.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "./android.keystore",
+    "alias": "android"
+  },
+  "appVersionName": "1.0.0",
+  "appVersionCode": 1,
+  "shortcuts": [
+    {
+      "name": "Continue learning",
+      "shortName": "Learn",
+      "url": "/learn",
+      "chosenIconUrl": "https://codequest.dev/icons/icon-192.png"
+    }
+  ],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://codequest.dev/manifest.webmanifest",
+  "fallbackType": "customtabs",
+  "features": {},
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://codequest.dev/",
+  "minSdkVersion": 21,
+  "orientation": "portrait",
+  "fingerprints": [],
+  "additionalTrustedOrigins": [],
+  "retainedBundles": []
+}

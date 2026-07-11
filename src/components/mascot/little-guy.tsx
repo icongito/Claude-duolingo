@@ -631,58 +631,67 @@ const ANIMS: Record<LittleGuyAnimation, Anim> = {
     still: 44,
     draw(f, d) {
       const open = f >= 25;
-      d.px(49, 34, WOOD, 10, 6);
-      d.px(49, 36, WOOD_D, 10, 1);
-      d.px(49, 38, WOOD_D, 10, 1);
-      d.px(49, 34, WOOD_L, 10, 1);
+      d.px(47, 34, WOOD, 14, 6);
+      d.px(47, 36, WOOD_D, 14, 1);
+      d.px(47, 38, WOOD_D, 14, 1);
+      d.px(47, 34, WOOD_L, 14, 1);
       if (!open) {
-        d.px(51, 30, WOOD_L, 6, 1);
-        d.px(50, 31, WOOD, 8, 1);
-        d.px(49, 32, WOOD, 10, 2);
-        d.px(49, 33, WOOD_D, 10, 1);
+        d.px(49, 30, WOOD_L, 10, 1);
+        d.px(48, 31, WOOD, 12, 1);
+        d.px(47, 32, WOOD, 14, 2);
+        d.px(47, 33, WOOD_D, 14, 1);
       } else {
-        d.px(51, 24, WOOD_L, 6, 1);
-        d.px(50, 25, WOOD, 8, 1);
-        d.px(49, 26, WOOD, 10, 2);
-        d.px(49, 28, WOOD_D, 10, 1);
-        d.px(50, 29, METAL, 1, 1);
-        d.px(57, 29, METAL, 1, 1);
-        d.px(50, 33, GOLD2, 8, 2);
-        d.px(51, 32, GOLD, 2, 1);
-        d.px(54, 32, GOLD, 3, 1);
-        d.px(53, 31, GOLD2, 1, 1);
+        d.px(49, 24, WOOD_L, 10, 1);
+        d.px(48, 25, WOOD, 12, 1);
+        d.px(47, 26, WOOD, 14, 2);
+        d.px(47, 28, WOOD_D, 14, 1);
+        d.px(48, 29, METAL, 1, 1);
+        d.px(59, 29, METAL, 1, 1);
+        d.px(48, 33, GOLD2, 12, 2);
+        d.px(49, 32, GOLD, 3, 1);
+        d.px(53, 32, GOLD, 2, 1);
+        d.px(56, 32, GOLD, 3, 1);
+        d.px(52, 31, GOLD2, 1, 1);
+        d.px(57, 31, GOLD2, 1, 1);
         if (f < 30)
-          for (let i = 0; i < 7; i++)
-            d.px(50 + i, 29 - Math.abs(i - 3) - (f % 2), GLOW, 1, 2 + (f % 2));
+          for (let i = 0; i < 11; i++)
+            d.px(
+              48 + i,
+              29 - Math.min(4, Math.abs(i - 5)) - (f % 2),
+              GLOW,
+              1,
+              2 + (f % 2),
+            );
       }
       const lidTop = open ? 24 : 30;
-      d.px(50, lidTop, METAL, 1, open ? 5 : 10);
-      d.px(57, lidTop, METAL, 1, open ? 5 : 10);
+      d.px(48, lidTop, METAL, 1, open ? 5 : 10);
+      d.px(59, lidTop, METAL, 1, open ? 5 : 10);
       if (open) {
-        d.px(50, 34, METAL, 1, 6);
-        d.px(57, 34, METAL, 1, 6);
+        d.px(48, 34, METAL, 1, 6);
+        d.px(59, 34, METAL, 1, 6);
       }
       d.px(52, open ? 33 : 32, GOLD, 4, 3);
       d.px(53, open ? 34 : 33, INK, 1, 1);
       d.px(53, open ? 35 : 34, INK, 1, 1);
-      d.px(49, 39, GOLD2, 1, 1);
-      d.px(58, 39, GOLD2, 1, 1);
-      d.px(49, open ? 26 : 31, GOLD2, 1, 1);
-      d.px(58, open ? 26 : 31, GOLD2, 1, 1);
+      d.px(47, 39, GOLD2, 1, 1);
+      d.px(60, 39, GOLD2, 1, 1);
+      d.px(47, open ? 26 : 31, GOLD2, 1, 1);
+      d.px(60, open ? 26 : 31, GOLD2, 1, 1);
       if (open && f < 44)
         for (let i = 0; i < 6; i++) {
           const t = f - 25 - i;
           if (t < 0 || t > 12) continue;
-          const x = 53 - Math.round((1 + R(i) * 1.6) * t),
+          const x = 54 - Math.round((0.5 + R(i) * 1.1) * t),
             y = 30 - Math.round(2.2 * t - 0.28 * t * t);
-          if (y < 40) {
+          if (y < 40 && x >= 42) {
             d.px(x, y, GOLD, 2, 2);
             d.px(x, y, GOLD2, 1, 1);
           }
         }
       const off = Math.min(4, -16 + f);
       const walking = off < 4;
-      const dy = f === 26 ? -2 : f === 27 ? -3 : f === 28 ? -1 : 0;
+      const dy =
+        f === 26 ? -2 : f === 27 ? -3 : f === 28 ? -1 : f === 34 ? -2 : f === 35 ? -1 : 0;
       const back = f >= 26 ? -6 : 0;
       const eyes: Eyes =
         f === 32 || f === 33 ? "coin" : f >= 34 ? "happy" : "normal";
@@ -696,16 +705,11 @@ const ANIMS: Record<LittleGuyAnimation, Anim> = {
               : [0, 2, 2, 0]
             : [0, 0, 0, 0],
           poke: f >= 22 && f < 25,
-          armL: f >= 34 ? "sag" : "down",
-          armR: f >= 34 ? "sag" : "down",
+          armL: f >= 34 ? "up" : "down",
+          armR: f >= 34 ? "up" : "down",
         }),
         f >= 26 ? off + back : off,
       );
-      if (f >= 32) {
-        const gx = 32 + off + back;
-        d.px(gx - 2, 31, GOLD, 4, 4);
-        d.px(gx - 1, 32, GOLD2, 2, 2);
-      }
     },
   },
   comeback: {

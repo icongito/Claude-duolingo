@@ -140,8 +140,10 @@ function guyCells(p: GuyParams = {}): Cell[] {
       [38, 3],
     ] as const
   ).forEach(([lx, i]) => {
+    // Dangling legs stay attached at the hip and hang longer — shifting the
+    // start row down instead left a 1px gap (visibly detached mid-air).
     const hang = dangle ? i % 2 : 0;
-    add(lx, 34 + dy - legUp[i] + hang, 2, 6 - hang);
+    add(lx, 34 + dy - legUp[i], 2, 6 + hang);
   });
   const ex1 = 27 + eDx,
     ex2 = 35 + eDx,
@@ -408,23 +410,42 @@ const ANIMS: Record<LittleGuyAnimation, Anim> = {
     },
   },
   boss: {
-    len: 40,
-    still: 39,
+    len: 44,
+    still: 40,
     draw(f, d) {
       for (let i = 0; i < 8; i++) {
-        const x = Math.floor((R(i) * 64 + f * 1.2)) % 64,
+        const x = Math.floor(R(i) * 64 + f * 1.2) % 64,
           y = 8 + Math.floor(R(i, 4) * 30);
         d.px(x, y, SMOKE);
       }
+      // Boss: a giant dark twin cresting over the top edge — torso and head
+      // only (legs cropped so it reads as a looming wall, not a squashed
+      // second creature), eased descent, then a slow menacing bob.
       if (f >= 6) {
-        const bossY = Math.min(-18, -48 + (f - 6) * 3);
-        d.blitScaled(guyCells({ eyes: "normal" }), 0, bossY, 2, 32, 33, (c) =>
+        const t = Math.min(1, (f - 6) / 12);
+        const e = 1 - Math.pow(1 - t, 3);
+        const bob = t >= 1 && Math.floor(f / 3) % 2 === 0 ? 1 : 0;
+        const bossY = Math.round(-46 + 28 * e) + bob;
+        const torso = guyCells({ eyes: "slit" }).filter(([, y]) => y < 34);
+        d.blitScaled(torso, 0, bossY, 2, 32, 33, (c) =>
           c === INK ? GLOW : DARKBODY,
         );
+        // arrival tremor: dust kicked up at the edges of the arena
+        if (f === 18 || f === 19) {
+          for (const [x, y] of [
+            [10, 39],
+            [14, 38],
+            [50, 38],
+            [54, 39],
+          ]) {
+            d.px(x, y, SMOKE);
+          }
+        }
       }
       const crouch = f >= 2,
-        boxer = f >= 8,
-        bounce = f >= 12 && f % 4 >= 2 ? -1 : 0;
+        boxer = f >= 8;
+      const tremor = f === 18 || f === 19 ? (f % 2 ? 1 : -1) : 0;
+      const bounce = f >= 22 && Math.floor(f / 2) % 2 === 1 ? -1 : 0;
       d.blit(
         guyCells({
           sq: crouch ? 2 : 0,
@@ -433,6 +454,7 @@ const ANIMS: Record<LittleGuyAnimation, Anim> = {
           armL: boxer ? "boxer" : "down",
           armR: boxer ? "boxer" : "down",
         }),
+        tremor,
       );
     },
   },
@@ -483,38 +505,82 @@ const ANIMS: Record<LittleGuyAnimation, Anim> = {
     },
   },
   level: {
-    len: 46,
-    still: 44,
+    len: 52,
+    still: 50,
     draw(f, d) {
-      if (f < 38) {
-        const w = Math.min(16, 4 + f * 4);
-        d.px(32 - w / 2, 0, BEAM, w, 40);
-        d.px(30, 0, GOLD2, 4, 40);
+      // Dramatic beam: pulsing width, layered gold core, sparkles rising.
+      if (f < 30) {
+        const w = Math.min(20, 4 + f * 4) + (f % 2 ? 2 : 0);
+        d.px(32 - Math.floor(w / 2), 0, BEAM, w, 40);
+        d.px(29, 0, GOLD, 6, 40);
+        d.px(31, 0, GOLD2, 2, 40);
+        for (let i = 0; i < 6; i++) {
+          const y = 43 - (Math.floor(R(i, 11) * 40 + f * 3) % 42);
+          d.px(29 + Math.floor(R(i, 13) * 6), y, i % 2 ? GOLD2 : "#FFFFFF");
+        }
       }
-      const rising = f >= 3 && f < 26;
-      const dy = rising
-        ? -Math.min(9, Math.floor((f - 3) / 2))
-        : f === 26
-          ? -4
-          : 0;
-      const vib = rising ? (f % 2 ? 1 : -1) : 0;
-      const shake = f === 27 || f === 28 ? (f % 2 ? 2 : -2) : 0;
-      d.blit(
-        guyCells({ dy, dangle: dy < 0, eyes: rising ? "closed" : "happy" }),
-        vib + shake,
-      );
-      if (f >= 27) {
-        const by = f === 27 ? 2 : f === 28 ? 8 : 6;
-        d.text(
-          "LVL UP",
-          32 - Math.floor(d.textW("LVL UP", 2) / 2) + shake,
-          by,
-          GLOW,
-          2,
-        );
-        for (let i = 0; i < 12; i++) {
-          const y = Math.floor((R(i, 7) * 48 + (f - 27) * 2.5)) % 46;
-          d.px(Math.floor(R(i) * 60) + 2, y, i % 2 ? GOLD : GOLD2);
+      if (f < 4) {
+        // caught in the beam
+        d.blit(guyCells({ eyes: "closed" }));
+      } else if (f < 12) {
+        // lifted, vibrating with the energy
+        const dy = -Math.min(6, Math.floor((f - 3) / 2) * 2);
+        d.blit(guyCells({ dy, dangle: true, eyes: "closed" }), f % 2 ? 1 : -1);
+      } else if (f < 20) {
+        // slowly breaks apart — pixels stream up into the light
+        const t = f - 12;
+        const base = guyCells({ dy: -6, dangle: true, eyes: "closed" });
+        base.forEach(([x, y, c], i) => {
+          const gone = t > 3 + R(i, 9) * 5;
+          if (gone) return;
+          const rise = Math.round((1 + R(i, 3) * 1.8) * t);
+          const jx = Math.round((R(i, 6) - 0.5) * 2);
+          const ny = y - 6 - rise;
+          if (ny >= 0) d.px(x + jx, ny, c);
+        });
+      } else if (f < 26) {
+        // recollects high inside the beam
+        const k = (f - 20) / 5;
+        const e = k * k;
+        const target = guyCells({ dy: -14, dangle: true, eyes: "closed" });
+        target.forEach(([x, y, c], i) => {
+          const sx = x + (R(i) - 0.5) * 30,
+            sy = y - 24 - R(i, 5) * 14;
+          d.px(Math.round(sx + (x - sx) * e), Math.round(sy + (y - sy) * e), c);
+        });
+      } else if (f < 28) {
+        // SLAMS back down
+        if (f === 26) {
+          d.blit(guyCells({ dy: -8, eyes: "closed" }));
+        } else {
+          d.blit(guyCells({ sq: 2, eyes: "closed" }));
+          for (const [x, y] of [
+            [18, 39],
+            [22, 38],
+            [27, 39],
+            [37, 39],
+            [42, 38],
+            [46, 39],
+          ]) {
+            d.px(x, y, SMOKE); // impact dust ring
+          }
+        }
+      } else {
+        const shake = f === 28 || f === 29 ? (f % 2 ? 2 : -2) : 0;
+        d.blit(guyCells({ eyes: "happy", sq: f < 30 ? 1 : 0 }), shake);
+        if (f >= 28) {
+          const by = f === 28 ? 2 : f === 29 ? 8 : 6;
+          d.text(
+            "LVL UP",
+            32 - Math.floor(d.textW("LVL UP", 2) / 2) + shake,
+            by,
+            GLOW,
+            2,
+          );
+          for (let i = 0; i < 12; i++) {
+            const y = Math.floor(R(i, 7) * 48 + (f - 28) * 2.5) % 46;
+            d.px(Math.floor(R(i) * 60) + 2, y, i % 2 ? GOLD : GOLD2);
+          }
         }
       }
     },
@@ -550,9 +616,10 @@ const ANIMS: Record<LittleGuyAnimation, Anim> = {
       d.px(41, 18, BUBBLE, 12, 1);
       d.px(38, 20, BUBBLE, 2, 2);
       d.px(36, 23, BUBBLE, 1, 1);
+      // dots centered in the 14-wide bubble: 2px margins on both sides
       const active = Math.floor(f / 2) % 3;
       [0, 1, 2].forEach((i) =>
-        d.px(43 + i * 4, 13, i === active ? DOT_ON : SAND, 2, 2),
+        d.px(42 + i * 4, 13, i === active ? DOT_ON : SAND, 2, 2),
       );
     },
   },
@@ -640,23 +707,41 @@ const ANIMS: Record<LittleGuyAnimation, Anim> = {
   },
   comeback: {
     len: 56,
-    still: 50,
+    still: 52,
     draw(f, d) {
-      const drops = f < 24 ? 18 : f < 34 ? Math.max(0, 18 - (f - 24) * 2) : 0;
-      for (let i = 0; i < drops; i++) {
-        const x = Math.floor(R(i) * 62) + 1,
-          y = Math.floor(R(i, 3) * 48 + f * 3) % 46;
-        d.px(x, y, RAIN, 1, 2);
+      // A small personal raincloud hovers over just him, then dissipates.
+      if (f < 26) {
+        d.px(26, 6, SMOKE, 12, 2);
+        d.px(28, 4, SMOKE, 8, 2);
+        d.px(30, 3, SMOKE, 4, 1);
+      } else if (f < 32) {
+        d.px(26, 6, SMOKE, 12, 1); // thinning out
       }
-      if (f < 6) d.flame(31, 21, f, 1);
-      else if (f < 8) d.flame(31, 22, f, 1);
-      else if (f < 16)
+      // Rain falls only under the cloud — dense, long drops.
+      const drops = f < 24 ? 26 : f < 34 ? Math.max(0, 26 - (f - 24) * 3) : 0;
+      for (let i = 0; i < drops; i++) {
+        const x = 24 + Math.floor(R(i) * 16),
+          y = 8 + (Math.floor(R(i, 3) * 32 + f * 4) % 32);
+        d.px(x, y, RAIN, 1, 3);
+      }
+      // Healthy double flame → sputter → smoke → spark → roars back bigger.
+      if (f < 6) {
+        d.flame(30, 19, f, 2);
+        d.flame(33, 20, f + 1, 2);
+      } else if (f < 8) {
+        d.flame(31, 22, f, 1);
+      } else if (f < 16) {
         for (let i = 0; i < 4; i++) {
           const t = f - 8;
           d.px(30 + Math.round((R(i) - 0.5) * 2 * t * 0.6), 21 - t + i, SMOKE);
         }
+      }
       if (f >= 32 && f < 36 && f % 2 === 0) d.px(31, 21, GLOW);
-      if (f >= 36) d.flame(31, 21, f, 1);
+      if (f >= 36 && f < 42) d.flame(31, 20, f, 2);
+      if (f >= 42) {
+        d.flame(30, 19, f, 2);
+        d.flame(33, 20, f + 1, 2);
+      }
       const wig = f >= 18 && f < 22 ? (f % 2 ? 1 : -1) : 0;
       const stomp: [number, number, number, number] =
         f === 25 ? [2, 2, 2, 2] : [0, 0, 0, 0];

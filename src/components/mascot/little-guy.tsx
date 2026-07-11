@@ -44,6 +44,9 @@ const SAND = "#2A2521";
 const BEAM = "#3A2D14";
 const SMOKE = "#57524A";
 const RAIN = "#46525C";
+const RAIN_DIM = "#333C44";
+const CLOUD_D = "#3E3A34";
+const PUDDLE = "#20262B";
 const BUBBLE = "#262220";
 const DOT_ON = "#F5F1EA";
 const SAND_DIM = ["#2A2521", "#211D19", "#171412", "#0D0D0D"];
@@ -709,20 +712,29 @@ const ANIMS: Record<LittleGuyAnimation, Anim> = {
     len: 56,
     still: 52,
     draw(f, d) {
-      // A small personal raincloud hovers over just him, then dissipates.
+      const raining = f < 24;
+      // Puddle pools on the ground beneath him, then drains away.
+      const puddleW = raining
+        ? Math.min(18, 4 + Math.floor(f * 0.8))
+        : Math.max(0, 18 - (f - 24) * 2);
+      if (puddleW > 0)
+        d.px(32 - Math.floor(puddleW / 2), 40, PUDDLE, puddleW, 1);
+      // Brooding personal raincloud: dark belly, lighter crown, slow drift.
+      const cd = Math.floor(f / 8) % 2; // 1px drift
       if (f < 26) {
-        d.px(26, 6, SMOKE, 12, 2);
-        d.px(28, 4, SMOKE, 8, 2);
-        d.px(30, 3, SMOKE, 4, 1);
+        d.px(26 + cd, 6, CLOUD_D, 12, 2);
+        d.px(28 + cd, 4, CLOUD_D, 8, 2);
+        d.px(29 + cd, 3, SMOKE, 6, 1);
+        d.px(27 + cd, 4, SMOKE, 2, 1);
       } else if (f < 32) {
-        d.px(26, 6, SMOKE, 12, 1); // thinning out
+        d.px(26 + cd, 6, CLOUD_D, 12, 1); // thinning out
       }
-      // Rain falls only under the cloud — dense, long drops.
-      const drops = f < 24 ? 26 : f < 34 ? Math.max(0, 26 - (f - 24) * 3) : 0;
-      for (let i = 0; i < drops; i++) {
-        const x = 24 + Math.floor(R(i) * 16),
-          y = 8 + (Math.floor(R(i, 3) * 32 + f * 4) % 32);
-        d.px(x, y, RAIN, 1, 3);
+      // Back rain layer: dim, short, slower — depth behind him.
+      const backDrops = raining ? 12 : f < 30 ? Math.max(0, 12 - (f - 24) * 2) : 0;
+      for (let i = 0; i < backDrops; i++) {
+        const x = 25 + Math.floor(R(i, 21) * 15),
+          y = 8 + (Math.floor(R(i, 22) * 32 + f * 3) % 32);
+        if (y < 39) d.px(x, y, RAIN_DIM, 1, 2);
       }
       // Healthy double flame → sputter → smoke → spark → roars back bigger.
       if (f < 6) {
@@ -746,7 +758,10 @@ const ANIMS: Record<LittleGuyAnimation, Anim> = {
       const stomp: [number, number, number, number] =
         f === 25 ? [2, 2, 2, 2] : [0, 0, 0, 0];
       const dip = f === 26 ? 1 : 0;
-      const eyes: Eyes = f >= 24 && f < 32 ? "slit" : "normal";
+      // Grief arc: watches the flame die, closes his eyes in the rain,
+      // shakes it off, narrows with determination, then relights.
+      const eyes: Eyes =
+        f >= 6 && f < 18 ? "closed" : f >= 24 && f < 32 ? "slit" : "normal";
       d.blit(
         guyCells({
           eyes,
@@ -761,6 +776,25 @@ const ANIMS: Record<LittleGuyAnimation, Anim> = {
       if (f >= 26 && f < 29) {
         d.px(24, 39, SMOKE);
         d.px(39, 39, SMOKE);
+      }
+      // Front rain layer: long slanted streaks falling PAST him, with
+      // splashes where they meet the ground.
+      const frontDrops = raining
+        ? 14
+        : f < 32
+          ? Math.max(0, 14 - (f - 24) * 2)
+          : 0;
+      for (let i = 0; i < frontDrops; i++) {
+        const t = Math.floor(R(i, 3) * 32 + f * 5) % 32;
+        const yy = 8 + t;
+        const x = 25 + Math.floor(R(i) * 15) - Math.floor(t / 12);
+        const h = Math.min(3, 39 - yy);
+        if (h > 0) d.px(x, yy, RAIN, 1, h);
+        if (yy + 3 < 39) d.px(x - 1, yy + 3, RAIN, 1, 1); // slanted tail tip
+        if (raining && t >= 29) {
+          d.px(x - 1, 39, RAIN, 1, 1); // splash
+          d.px(x + 1, 39, RAIN, 1, 1);
+        }
       }
     },
   },

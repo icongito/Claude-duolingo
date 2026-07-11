@@ -54,17 +54,19 @@ const BODY='#D9755A', INK='#141414', GLOW='#FF7A1A', GOLD='#F2B33D', GOLD2='#FFD
       WOOD='#B07A44', WOOD_D='#8A5D2E', WOOD_L='#C89457', METAL='#4A3D30';
 
 // Theme-dependent scenery colors, reassigned by applyTheme().
-let BG, SAND, BEAM, SMOKE, RAIN, BUBBLE, DOT_ON, BG_DIM, SAND_DIM;
+let BG, SAND, BEAM, SMOKE, RAIN, RAIN_DIM, CLOUD_D, PUDDLE, BUBBLE, DOT_ON, BG_DIM, SAND_DIM;
 
 const THEMES={
   light:{
     BG:'#F5F1EA', SAND:'#DDD6C7', BEAM:'#FFE9B8', SMOKE:'#A8A198', RAIN:'#AEB8C0',
+    RAIN_DIM:'#CDD3D8', CLOUD_D:'#8E887D', PUDDLE:'#C0C9D0',
     BUBBLE:'#FFFFFF', DOT_ON:'#141414',
     BG_DIM:['#F5F1EA','#CFC7BB','#8F877C','#3A342E'],
     SAND_DIM:['#DDD6C7','#BBB2A2','#7C7468','#2E2A25'],
   },
   dark:{
     BG:'#0D0D0D', SAND:'#2A2521', BEAM:'#3A2D14', SMOKE:'#57524A', RAIN:'#46525C',
+    RAIN_DIM:'#333C44', CLOUD_D:'#3E3A34', PUDDLE:'#20262B',
     BUBBLE:'#262220', DOT_ON:'#F5F1EA',
     BG_DIM:['#0D0D0D','#090909','#040404','#000000'],
     SAND_DIM:['#2A2521','#211D19','#171412','#0D0D0D'],
@@ -74,7 +76,7 @@ let theme='light';
 function applyTheme(mode){
   theme=mode;
   const t=THEMES[mode];
-  ({BG,SAND,BEAM,SMOKE,RAIN,BUBBLE}=t);
+  ({BG,SAND,BEAM,SMOKE,RAIN,RAIN_DIM,CLOUD_D,PUDDLE,BUBBLE}=t);
   DOT_ON=t.DOT_ON; BG_DIM=t.BG_DIM; SAND_DIM=t.SAND_DIM;
   document.documentElement.dataset.theme=mode;
   themeBtn.textContent = mode==='dark' ? 'light' : 'dark';
@@ -432,19 +434,25 @@ A.chest={name:'Treasure chest',len:72,still:44,draw(f){
 }};
 
 A.comeback={name:'Streak lost / comeback',len:56,still:52,draw(f){
-  // a small personal raincloud hovers over just him, then dissipates
+  const raining=f<24;
+  // puddle pools beneath him, then drains away
+  const puddleW=raining?Math.min(18,4+Math.floor(f*0.8)):Math.max(0,18-(f-24)*2);
+  if(puddleW>0) px(32-Math.floor(puddleW/2),40,PUDDLE,puddleW,1);
+  // brooding personal raincloud: dark belly, lighter crown, slow drift
+  const cd=Math.floor(f/8)%2;
   if(f<26){
-    px(26,6,SMOKE,12,2);
-    px(28,4,SMOKE,8,2);
-    px(30,3,SMOKE,4,1);
+    px(26+cd,6,CLOUD_D,12,2);
+    px(28+cd,4,CLOUD_D,8,2);
+    px(29+cd,3,SMOKE,6,1);
+    px(27+cd,4,SMOKE,2,1);
   } else if(f<32){
-    px(26,6,SMOKE,12,1);
+    px(26+cd,6,CLOUD_D,12,1);
   }
-  // rain falls only under the cloud — dense, long drops
-  const drops = f<24 ? 26 : f<34 ? Math.max(0, 26-(f-24)*3) : 0;
-  for(let i=0;i<drops;i++){
-    const x=24+Math.floor(R(i)*16), y=8+(Math.floor(R(i,3)*32+f*4)%32);
-    px(x,y,RAIN,1,3);
+  // back rain layer: dim, short, slower — depth behind him
+  const backDrops=raining?12:f<30?Math.max(0,12-(f-24)*2):0;
+  for(let i=0;i<backDrops;i++){
+    const x=25+Math.floor(R(i,21)*15), y=8+(Math.floor(R(i,22)*32+f*3)%32);
+    if(y<39) px(x,y,RAIN_DIM,1,2);
   }
   // healthy double flame -> sputter -> smoke -> spark -> roars back bigger
   if(f<6){ flame(30,19,f,2); flame(33,20,f+1,2); }
@@ -459,10 +467,23 @@ A.comeback={name:'Streak lost / comeback',len:56,still:52,draw(f){
   const wig=(f>=18&&f<22)?(f%2?1:-1):0;
   const stomp=(f===25)?[2,2,2,2]:[0,0,0,0];
   const dip=(f===26)?1:0;
-  const eyes=(f>=24&&f<32)?'slit':'normal';
+  // grief arc: watch the flame die, eyes closed in the rain, shake off,
+  // narrow with determination, relight
+  const eyes=(f>=6&&f<18)?'closed':(f>=24&&f<32)?'slit':'normal';
   blit(guyCells({eyes,eDy:f<18?1:0,legUp:stomp,dy:dip,
                  armL:f<18?'sag':'down',armR:f<18?'sag':'down'}),wig);
   if(f>=26&&f<29){px(24,39,SMOKE);px(39,39,SMOKE);}
+  // front rain layer: long slanted streaks falling PAST him + splashes
+  const frontDrops=raining?14:f<32?Math.max(0,14-(f-24)*2):0;
+  for(let i=0;i<frontDrops;i++){
+    const t=Math.floor(R(i,3)*32+f*5)%32;
+    const yy=8+t;
+    const x=25+Math.floor(R(i)*15)-Math.floor(t/12);
+    const h=Math.min(3,39-yy);
+    if(h>0) px(x,yy,RAIN,1,h);
+    if(yy+3<39) px(x-1,yy+3,RAIN,1,1);
+    if(raining&&t>=29){ px(x-1,39,RAIN,1,1); px(x+1,39,RAIN,1,1); }
+  }
 }};
 
 // ---------- UI + loop ----------

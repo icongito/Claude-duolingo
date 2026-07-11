@@ -83,6 +83,17 @@ type Eyes =
   | "coin";
 type ArmMode = "down" | "sag" | "up" | "boxer";
 
+/** Marketplace wearables — extra cell layers drawn by the same rig so they
+ * track every animation's bounce/squash for free. */
+export type LittleGuyWear = "none" | "cap" | "wizard" | "crown" | "specs";
+
+const WIZ = "#6C4ED9";
+const CAP_BAND = "#C25910";
+
+/** Set by the component right before each draw; guyCells reads it so every
+ * animation renders the equipped cosmetic without knowing about it. */
+let ACTIVE_WEAR: LittleGuyWear = "none";
+
 type GuyParams = {
   dy?: number;
   sq?: number;
@@ -191,6 +202,38 @@ function guyCells(p: GuyParams = {}): Cell[] {
   };
   eye(ex1);
   eye(ex2);
+  switch (ACTIVE_WEAR) {
+    case "cap":
+      add(27, capY - 3, 10, 2, GLOW);
+      add(26, capY - 1, 12, 1, CAP_BAND);
+      add(38, capY - 1, 4, 1, CAP_BAND);
+      break;
+    case "wizard":
+      add(31, capY - 8, 2, 1, WIZ);
+      add(30, capY - 7, 4, 2, WIZ);
+      add(29, capY - 5, 6, 2, WIZ);
+      add(28, capY - 3, 8, 2, WIZ);
+      add(25, capY - 1, 14, 1, WIZ);
+      add(31, capY - 6, 1, 1, GOLD2);
+      break;
+    case "crown":
+      add(27, capY - 4, 1, 2, GOLD);
+      add(31, capY - 4, 2, 2, GOLD);
+      add(36, capY - 4, 1, 2, GOLD);
+      add(27, capY - 2, 10, 2, GOLD);
+      add(29, capY - 1, 1, 1, GLOW);
+      add(34, capY - 1, 1, 1, GLOW);
+      break;
+    case "specs":
+      [ex1, ex2].forEach((ex) => {
+        add(ex - 1, ey - 1, 4, 1, DOT_ON);
+        add(ex - 1, ey + 2, 4, 1, DOT_ON);
+        add(ex - 1, ey, 1, 2, DOT_ON);
+        add(ex + 2, ey, 1, 2, DOT_ON);
+      });
+      add(ex1 + 3, ey, 4, 1, DOT_ON);
+      break;
+  }
   return C;
 }
 
@@ -812,6 +855,7 @@ export function LittleGuy({
   size = 160,
   withGround = false,
   crop = false,
+  wear = "none",
   className,
 }: {
   animation?: LittleGuyAnimation;
@@ -821,6 +865,8 @@ export function LittleGuy({
    * guy-only animations (idle/streak); scene animations (chest, lesson,
    * level, think) need the full frame. */
   crop?: boolean;
+  /** Equipped cosmetic (marketplace wearable). */
+  wear?: LittleGuyWear;
   className?: string;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -851,11 +897,15 @@ export function LittleGuy({
           animation === "boss" ? Math.min(3, Math.floor(f / 5)) : 0;
         d.ground(dim);
       }
+      // Draws are synchronous, so scoping the wear to this call is safe even
+      // with several differently-dressed guys on one page.
+      ACTIVE_WEAR = wear;
       anim.draw(f, d);
+      ACTIVE_WEAR = "none";
     };
     raf = requestAnimationFrame(render);
     return () => cancelAnimationFrame(raf);
-  }, [animation, withGround]);
+  }, [animation, withGround, wear]);
 
   if (crop) {
     const canvasW = (size * GW) / CROP.w;

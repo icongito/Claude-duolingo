@@ -58,6 +58,11 @@ subscriptions, and admin/analytics.
 - [x] PWA: web manifest, mascot icon set, service worker with branded offline page
 - [x] Play Store packaging: TWA config (`twa-manifest.json`), digital asset links, launch runbook
 - [x] CI: GitHub Actions (lint, typecheck, tests, build)
+- [x] Boss battles (named 3-stage timed gauntlet capping every world)
+- [x] Quests (daily/weekly/special) with scarce-gem faucets
+- [x] Marketplace: mascot wearables, streak protection, cosmetics, gem packs
+- [x] Monetization: premium tiers, checkout (demo), billing management
+- [x] AI Mentor tiering (fast model free / smarter model on paid plans)
 
 The app runs in **demo mode** without any configuration: all app surfaces
 render from a typed demo-data layer (`src/lib/data/`). Connecting a real

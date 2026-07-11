@@ -1,4 +1,6 @@
 import { levelProgress, rankForLevel } from "@/lib/gamification/xp";
+import type { PlanId } from "@/lib/data/economy";
+import type { LittleGuyWear } from "@/components/mascot/little-guy";
 
 /**
  * Demo data provider for the signed-out / no-database preview experience.
@@ -25,6 +27,8 @@ export type CurrentUser = {
   weeklyGoalDays: number;
   weeklyDaysActive: number;
   joinedAt: string;
+  plan: PlanId;
+  equippedWear: LittleGuyWear;
 };
 
 export const DEMO_USER: CurrentUser = (() => {
@@ -38,7 +42,8 @@ export const DEMO_USER: CurrentUser = (() => {
     level,
     totalXp,
     coins: 1240,
-    gems: 86,
+    // Gems are scarce by design (~5-10/week from quests + boss first-clears).
+    gems: 14,
     skillPoints: 12,
     currentStreak: 12,
     longestStreak: 34,
@@ -49,6 +54,8 @@ export const DEMO_USER: CurrentUser = (() => {
     weeklyGoalDays: 5,
     weeklyDaysActive: 4,
     joinedAt: "2026-03-02",
+    plan: "premium",
+    equippedWear: "cap",
   };
 })();
 

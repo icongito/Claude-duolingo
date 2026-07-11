@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { ChevronRight, Crown } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { SettingsForm } from "@/components/settings/settings-form";
+import { DEMO_BILLING, getPlan } from "@/lib/data/economy";
 
 export const metadata: Metadata = { title: "Settings" };
 
@@ -13,6 +16,22 @@ export default function SettingsPage() {
           Tune CodeQuest to how you like to learn.
         </p>
       </div>
+      <Link href="/settings/billing" className="group">
+        <Card className="transition-colors group-hover:border-primary/40">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Crown className="text-accent size-4" /> Subscription & billing
+              </CardTitle>
+              <CardDescription>
+                {getPlan(DEMO_BILLING.plan).name} · renews {DEMO_BILLING.renewsOn} ·
+                manage plan, card, and invoices
+              </CardDescription>
+            </div>
+            <ChevronRight className="text-muted-foreground size-5" />
+          </CardHeader>
+        </Card>
+      </Link>
       <SettingsForm />
       <Card className="border-destructive/30">
         <CardHeader>

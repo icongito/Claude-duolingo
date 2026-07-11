@@ -5,10 +5,12 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Map,
+  Target,
   Trophy,
   BarChart3,
   Users,
   ShoppingBag,
+  Crown,
   UserRound,
   Settings,
   ShieldHalf,
@@ -19,10 +21,12 @@ import { cn } from "@/lib/utils";
 const NAV = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/learn", label: "Learn", icon: Map },
+  { href: "/quests", label: "Quests", icon: Target },
   { href: "/achievements", label: "Achievements", icon: Trophy },
   { href: "/leaderboard", label: "Leaderboard", icon: BarChart3 },
   { href: "/community", label: "Community", icon: Users },
   { href: "/marketplace", label: "Marketplace", icon: ShoppingBag },
+  { href: "/premium", label: "Premium", icon: Crown },
   { href: "/profile", label: "Profile", icon: UserRound },
 ];
 

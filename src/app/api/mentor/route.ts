@@ -1,6 +1,29 @@
 import { NextResponse } from "next/server";
+import { DEMO_USER } from "@/lib/data/demo-user";
+import type { PlanId } from "@/lib/data/economy";
 
 export const runtime = "nodejs";
+
+/**
+ * Mentor tiering: Free rides the fast model with a small daily budget; paid
+ * tiers get the smarter model and much bigger (or no) limits. In demo mode
+ * the limit is enforced per conversation (user messages in the submitted
+ * history); with real persistence this becomes a per-user daily counter.
+ */
+const PLAN_MODEL: Record<PlanId, string> = {
+  free: "claude-haiku-4-5-20251001",
+  premium: "claude-sonnet-5",
+  premium_plus: "claude-sonnet-5",
+};
+
+const PLAN_MESSAGE_LIMIT: Record<PlanId, number> = {
+  free: 10,
+  premium: 200,
+  premium_plus: Number.MAX_SAFE_INTEGER,
+};
+
+const LIMIT_REPLY =
+  "You've used all your free mentor messages for today — they refill at midnight. Premium learners get 200/day on a smarter model if you can't wait. Meanwhile: re-read the lesson's explanation panel, it usually hides the hint you need!";
 
 const SYSTEM_PROMPT = `You are Nova, CodeQuest's AI Mentor — a friendly, encouraging coding tutor inside a gamified learning platform for developers.
 
@@ -32,7 +55,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const messages = (body.messages ?? []).slice(-20);
+  const history = body.messages ?? [];
+  const messages = history.slice(-20);
   if (
     !Array.isArray(messages) ||
     messages.some(
@@ -44,6 +68,15 @@ export async function POST(request: Request) {
     )
   ) {
     return NextResponse.json({ error: "Invalid messages" }, { status: 400 });
+  }
+
+  const plan = DEMO_USER.plan;
+  // Count against the full submitted history, not the truncated window.
+  const userMessages = Array.isArray(history)
+    ? history.filter((m) => m?.role === "user").length
+    : 0;
+  if (userMessages > PLAN_MESSAGE_LIMIT[plan]) {
+    return NextResponse.json({ reply: LIMIT_REPLY, demo: false, limited: true });
   }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -59,7 +92,7 @@ export async function POST(request: Request) {
       "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
-      model: "claude-haiku-4-5-20251001",
+      model: PLAN_MODEL[plan],
       max_tokens: 600,
       system: SYSTEM_PROMPT,
       messages,

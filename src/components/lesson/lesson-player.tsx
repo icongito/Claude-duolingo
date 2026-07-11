@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils";
 
 const MAX_HEARTS = 3;
 
-function StepRenderer({
+export function StepRenderer({
   step,
   onResult,
 }: {

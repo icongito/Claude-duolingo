@@ -187,6 +187,7 @@ export function LessonPlayer({ session }: { session: LessonSession }) {
               <Link href={`/learn/${session.worldSlug}`}>Back to the map</Link>
             </Button>
           </div>
+          <AdCard seed={session.nodeId.length + 1} />
         </motion.div>
       </div>
     );

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Gem, Heart, Skull, Swords, Timer, X } from "lucide-react";
+import { AdCard } from "@/components/ads/ad-card";
 import { Button } from "@/components/ui/button";
 import { LittleGuy } from "@/components/mascot/little-guy";
 import type { BossBattle } from "@/lib/data/boss";
@@ -204,6 +205,7 @@ export function BossPlayer({ battle }: { battle: BossBattle }) {
               <Link href="/dashboard">Dashboard</Link>
             </Button>
           </div>
+          <AdCard seed={battle.nodeId.length} />
         </motion.div>
       </div>
     );
@@ -233,6 +235,7 @@ export function BossPlayer({ battle }: { battle: BossBattle }) {
               <Link href={`/learn/${battle.worldSlug}`}>Back to the map</Link>
             </Button>
           </div>
+          <AdCard seed={battle.nodeId.length + 1} />
         </motion.div>
       </div>
     );

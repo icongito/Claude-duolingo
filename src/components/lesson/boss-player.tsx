@@ -3,9 +3,22 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Gem, Heart, Skull, Swords, Timer, X } from "lucide-react";
+import {
+  CloudUpload,
+  FolderGit2,
+  Gem,
+  GitCommitHorizontal,
+  Heart,
+  Loader2,
+  Skull,
+  Swords,
+  Timer,
+  X,
+} from "lucide-react";
 import { AdCard } from "@/components/ads/ad-card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { LittleGuy } from "@/components/mascot/little-guy";
 import type { BossBattle } from "@/lib/data/boss";
 import { StepRenderer } from "./lesson-player";
@@ -13,7 +26,14 @@ import { cn } from "@/lib/utils";
 
 const MAX_HEARTS = 3;
 
-type Phase = "intro" | "stage" | "playing" | "victory" | "defeat";
+type Phase =
+  | "intro"
+  | "stage"
+  | "playing"
+  | "publishing"
+  | "published"
+  | "victory"
+  | "defeat";
 
 function formatClock(s: number): string {
   const m = Math.floor(s / 60);
@@ -84,6 +104,13 @@ export function BossPlayer({ battle }: { battle: BossBattle }) {
     return () => clearInterval(id);
   }, [fighting]);
 
+  // The Ship It project "publishes" for a beat before the repo card reveals.
+  useEffect(() => {
+    if (phase !== "publishing") return;
+    const id = setTimeout(() => setPhase("published"), 1600);
+    return () => clearTimeout(id);
+  }, [phase]);
+
   function reset() {
     setStageIndex(0);
     setStepIndex(0);
@@ -108,6 +135,9 @@ export function BossPlayer({ battle }: { battle: BossBattle }) {
     }
     if (stepIndex + 1 < stage.steps.length) {
       setStepIndex((i) => i + 1);
+    } else if (stage.kind === "project") {
+      // Ship It is always the last stage — clearing it publishes, then wins.
+      setPhase("publishing");
     } else if (stageIndex + 1 < battle.stages.length) {
       setStageIndex((i) => i + 1);
       setStepIndex(0);
@@ -156,6 +186,71 @@ export function BossPlayer({ battle }: { battle: BossBattle }) {
               <Link href={`/learn/${battle.worldSlug}`}>Retreat</Link>
             </Button>
           </div>
+        </motion.div>
+      </div>
+    );
+  }
+
+  if (phase === "publishing") {
+    return (
+      <div className="flex min-h-[70vh] flex-col items-center justify-center gap-5 text-center">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="flex flex-col items-center gap-5"
+        >
+          <Loader2 className="text-primary size-10 animate-spin" />
+          <h1 className="font-pixel text-2xl">Publishing to GitHub…</h1>
+          <p className="text-muted-foreground max-w-sm text-sm">
+            Pushing{" "}
+            <code className="rounded bg-black/30 px-1.5 py-0.5 font-mono text-xs">
+              {battle.project.repoOwner}/{battle.project.repoName}
+            </code>
+          </p>
+        </motion.div>
+      </div>
+    );
+  }
+
+  if (phase === "published") {
+    return (
+      <div className="flex min-h-[70vh] flex-col items-center justify-center gap-6 text-center">
+        <motion.div
+          initial={{ scale: 0.85, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: "spring", stiffness: 200, damping: 16 }}
+          className="flex w-full max-w-md flex-col items-center gap-5"
+        >
+          <LittleGuy animation="chest" size={200} />
+          <h1 className="font-pixel text-2xl">Shipped it!</h1>
+          <Card className="w-full gap-3 p-5 text-left">
+            <div className="flex items-center gap-2">
+              <FolderGit2 className="text-primary size-5 shrink-0" />
+              <span className="font-mono text-sm font-semibold">
+                {battle.project.repoOwner}/{battle.project.repoName}
+              </span>
+              <Badge variant="outline" className="ml-auto">
+                public
+              </Badge>
+            </div>
+            <div className="text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+              <span className="flex items-center gap-1">
+                <GitCommitHorizontal className="size-3.5" /> {battle.project.commitSha}
+              </span>
+              <span>
+                {battle.project.filesChanged} file
+                {battle.project.filesChanged === 1 ? "" : "s"} changed
+              </span>
+              <span className="capitalize">{battle.project.size} project</span>
+            </div>
+          </Card>
+          <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
+            <CloudUpload className="size-3.5" /> Demo publish — no real repository was
+            created.
+          </p>
+          <Button size="lg" onClick={() => setPhase("victory")}>
+            Continue
+          </Button>
         </motion.div>
       </div>
     );
@@ -293,8 +388,10 @@ export function BossPlayer({ battle }: { battle: BossBattle }) {
       ) : (
         <>
           <p className="text-muted-foreground -mb-4 text-xs font-semibold tracking-widest uppercase">
-            Stage {stageIndex + 1}: {stage.title} · attack {stepIndex + 1} of{" "}
-            {stage.steps.length}
+            Stage {stageIndex + 1}: {stage.title}
+            {stage.kind === "project"
+              ? " · build the project"
+              : ` · attack ${stepIndex + 1} of ${stage.steps.length}`}
           </p>
           <AnimatePresence mode="wait">
             <motion.div

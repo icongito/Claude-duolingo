@@ -106,6 +106,8 @@ type GuyParams = {
   legUp?: [number, number, number, number];
   dangle?: boolean;
   poke?: boolean;
+  /** Crown wearable rendered split in half (lightning-strike moment). */
+  crownCut?: boolean;
 };
 
 // Reference build: body 16 cells wide (x24..39), FOUR legs, feet on y=40.
@@ -122,16 +124,25 @@ function guyCells(p: GuyParams = {}): Cell[] {
     legUp = [0, 0, 0, 0],
     dangle = false,
     poke = false,
+    crownCut = false,
   } = p;
   const C: Cell[] = [];
   const add = (x: number, y: number, w = 1, h = 1, c = BODY) => {
     for (let i = 0; i < w; i++)
       for (let j = 0; j < h; j++) C.push([x + i, y + j, c]);
   };
-  const capY = 26 + dy + sq - st;
+  // The wizard hat lifts its wearer a couple pixels off the ground with a
+  // gentle bob — stacks on top of whatever dy the current animation is
+  // already doing (a jump, a crouch, ...).
+  const wizardHover =
+    ACTIVE_WEAR === "wizard"
+      ? -2 + Math.round(Math.sin(performance.now() / 450))
+      : 0;
+  const dy2 = dy + wizardHover;
+  const capY = 26 + dy2 + sq - st;
   add(26, capY, 12, 2);
-  add(24, capY + 2, 16, 33 + dy - (capY + 2) + 1);
-  const armY = 30 + dy;
+  add(24, capY + 2, 16, 33 + dy2 - (capY + 2) + 1);
+  const armY = 30 + dy2;
   const arm = (side: -1 | 1, mode: ArmMode) => {
     const left = side < 0;
     if (mode === "down") add(left ? 20 : 40, armY, 4, 2);
@@ -157,11 +168,11 @@ function guyCells(p: GuyParams = {}): Cell[] {
     // Dangling legs stay attached at the hip and hang longer — shifting the
     // start row down instead left a 1px gap (visibly detached mid-air).
     const hang = dangle ? i % 2 : 0;
-    add(lx, 34 + dy - legUp[i], 2, 6 + hang);
+    add(lx, 34 + dy2 - legUp[i], 2, 6 + hang);
   });
   const ex1 = 27 + eDx,
     ex2 = 35 + eDx,
-    ey = 29 + dy + sq - st + eDy;
+    ey = 29 + dy2 + sq - st + eDy;
   const eye = (ex: number) => {
     switch (eyes) {
       case "normal":
@@ -217,12 +228,29 @@ function guyCells(p: GuyParams = {}): Cell[] {
       add(31, capY - 6, 1, 1, GOLD2);
       break;
     case "crown":
-      add(27, capY - 4, 1, 2, GOLD);
-      add(31, capY - 4, 2, 2, GOLD);
-      add(36, capY - 4, 1, 2, GOLD);
-      add(27, capY - 2, 10, 2, GOLD);
-      add(29, capY - 1, 1, 1, GLOW);
-      add(34, capY - 1, 1, 1, GLOW);
+      if (crownCut) {
+        // sliced clean down the middle — halves drift apart and sag.
+        add(26, capY - 3, 1, 2, GOLD);
+        add(25, capY - 1, 5, 2, GOLD);
+        add(28, capY, 1, 1, GLOW);
+        add(37, capY - 3, 1, 2, GOLD);
+        add(33, capY - 1, 5, 2, GOLD);
+        add(35, capY, 1, 1, GLOW);
+      } else {
+        // slow three-color shimmer — reads as a subtle glow, not a strobe.
+        const pulse = Math.floor(performance.now() / 180) % 3;
+        const shine = pulse === 0 ? GOLD2 : pulse === 1 ? GLOW : GOLD;
+        add(27, capY - 4, 1, 2, GOLD);
+        add(31, capY - 4, 2, 2, GOLD);
+        add(36, capY - 4, 1, 2, GOLD);
+        add(27, capY - 2, 10, 2, GOLD);
+        add(29, capY - 1, 1, 1, shine);
+        add(34, capY - 1, 1, 1, shine);
+        if (pulse !== 1) {
+          add(30, capY - 5, 1, 1, GOLD2);
+          add(35, capY - 5, 1, 1, GOLD2);
+        }
+      }
       break;
     case "specs":
       [ex1, ex2].forEach((ex) => {
@@ -508,6 +536,27 @@ const ANIMS: Record<LittleGuyAnimation, Anim> = {
     len: 40,
     still: 2,
     draw(f, d) {
+      // A bolt strikes from directly overhead in the first 3 frames — the
+      // shock is what cracks the heart. If a crown is equipped, it's the
+      // first thing hit: it stays visibly cut for the rest of the sequence.
+      const crownCut = f >= 1;
+      if (f < 3) {
+        let bx = 32;
+        for (let i = 0; i < 6; i++) {
+          const by0 = Math.floor((i / 6) * 20),
+            by1 = Math.floor(((i + 1) / 6) * 20);
+          const bx2 = bx + Math.round((R(i, 40) - 0.5) * 6);
+          d.px(
+            Math.min(bx, bx2),
+            by0,
+            GOLD2,
+            Math.abs(bx2 - bx) + 2,
+            Math.max(1, by1 - by0),
+          );
+          bx = bx2;
+        }
+        if (f === 1) d.px(18, 18, GOLD2, 28, 1);
+      }
       if (f < 4) d.heart(30, 14);
       else if (f < 6) {
         d.heart(30, 14);
@@ -522,10 +571,10 @@ const ANIMS: Record<LittleGuyAnimation, Anim> = {
       const ox = f === 1 ? -2 : f >= 2 ? -3 : 0,
         dy = f === 1 ? -2 : 0;
       if (f < 6) {
-        d.blit(guyCells({ dy, eyes: f >= 2 ? "x" : "normal" }), ox);
+        d.blit(guyCells({ dy, eyes: f >= 2 ? "x" : "normal", crownCut }), ox);
       } else if (f < 19) {
         const t = f - 6,
-          cells = guyCells({ eyes: "x" });
+          cells = guyCells({ eyes: "x", crownCut });
         cells.forEach(([x, y, c], i) => {
           const dx = x - 32,
             dyc = y - 31;
@@ -539,14 +588,14 @@ const ANIMS: Record<LittleGuyAnimation, Anim> = {
         });
       } else if (f >= 25 && f < 34) {
         const k = 1 - Math.pow(1 - (f - 25) / 8, 3),
-          cells = guyCells({ eyes: "closed" });
+          cells = guyCells({ eyes: "closed", crownCut });
         cells.forEach(([x, y, c], i) => {
           const fx = x + (R(i) - 0.5) * 44,
             fy = y - (6 + R(i, 3) * 26);
           d.px(Math.round(fx + (x - fx) * k), Math.round(fy + (y - fy) * k), c);
         });
       } else if (f >= 34) {
-        d.blit(guyCells({ eyes: f < 37 ? "closed" : "normal" }));
+        d.blit(guyCells({ eyes: f < 37 ? "closed" : "normal", crownCut }));
       }
     },
   },

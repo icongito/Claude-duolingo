@@ -44,6 +44,7 @@
 </div>
 <div id="stage"><canvas id="c"></canvas></div>
 <div class="bar" id="bar"></div>
+<div class="bar" id="wearBar"></div>
 
 <script>
 (() => {
@@ -51,7 +52,13 @@
 // Constant across themes: the guy and his props.
 const BODY='#D9755A', INK='#141414', GLOW='#FF7A1A', GOLD='#F2B33D', GOLD2='#FFD873',
       DARKBODY='#2E2A25',
-      WOOD='#B07A44', WOOD_D='#8A5D2E', WOOD_L='#C89457', METAL='#4A3D30';
+      WOOD='#B07A44', WOOD_D='#8A5D2E', WOOD_L='#C89457', METAL='#4A3D30',
+      WIZ='#6C4ED9', CAP_BAND='#C25910';
+
+// Marketplace wearables — extra cell layers drawn by guyCells() itself so
+// they track every animation for free. Kept in sync with LittleGuyWear in
+// src/components/mascot/little-guy.tsx.
+let ACTIVE_WEAR='none';
 
 // Theme-dependent scenery colors, reassigned by applyTheme().
 let BG, SAND, BEAM, SMOKE, RAIN, RAIN_DIM, CLOUD_D, PUDDLE, BUBBLE, DOT_ON, BG_DIM, SAND_DIM;
@@ -123,14 +130,18 @@ const textW=(str,sc=1)=>str.length*4*sc-sc;
 // Reference build: body 16 cells wide (x24..39), FOUR legs, feet on y=40.
 function guyCells(p={}){
   const {dy=0,sq=0,st=0,eyes='normal',eDx=0,eDy=0,armL='down',armR='down',
-         legUp=[0,0,0,0],dangle=false,poke=false}=p;
+         legUp=[0,0,0,0],dangle=false,poke=false,crownCut=false}=p;
   const C=[];
   const add=(x,y,w=1,h=1,c=BODY)=>{for(let i=0;i<w;i++)for(let j=0;j<h;j++)C.push([x+i,y+j,c]);};
-  const capY=26+dy+sq-st;
+  // Wizard hat: lift the whole guy a couple pixels off the ground with a
+  // gentle bob, layered on top of whatever dy the current animation is doing.
+  const wizardHover = ACTIVE_WEAR==='wizard' ? -2+Math.round(Math.sin(performance.now()/450)) : 0;
+  const dy2 = dy + wizardHover;
+  const capY=26+dy2+sq-st;
   add(26,capY,12,2);                       // head cap
-  add(24,capY+2,16,33+dy-(capY+2)+1);      // main body
+  add(24,capY+2,16,33+dy2-(capY+2)+1);     // main body
   // arms
-  const armY=30+dy;
+  const armY=30+dy2;
   const arm=(side,mode)=>{
     if(mode==='down') side<0? add(20,armY,4,2):   add(40,armY,4,2);
     if(mode==='sag')  side<0? add(20,armY+1,4,2): add(40,armY+1,4,2);
@@ -143,10 +154,10 @@ function guyCells(p={}){
   // Dangling legs stay attached at the hip and hang longer (never detach).
   [[24,0],[28,1],[34,2],[38,3]].forEach(([lx,i])=>{
     const hang=dangle?(i%2):0;
-    add(lx,34+dy-legUp[i],2,6+hang);
+    add(lx,34+dy2-legUp[i],2,6+hang);
   });
   // eyes
-  const ex1=27+eDx, ex2=35+eDx, ey=29+dy+sq-st+eDy;
+  const ex1=27+eDx, ex2=35+eDx, ey=29+dy2+sq-st+eDy;
   const eye=(ex)=>{
     switch(eyes){
       case 'normal': add(ex,ey,2,2,INK); break;
@@ -159,6 +170,55 @@ function guyCells(p={}){
     }
   };
   eye(ex1); eye(ex2);
+  switch(ACTIVE_WEAR){
+    case 'cap':
+      add(27,capY-3,10,2,GLOW);
+      add(26,capY-1,12,1,CAP_BAND);
+      add(38,capY-1,4,1,CAP_BAND);
+      break;
+    case 'wizard':
+      add(31,capY-8,2,1,WIZ);
+      add(30,capY-7,4,2,WIZ);
+      add(29,capY-5,6,2,WIZ);
+      add(28,capY-3,8,2,WIZ);
+      add(25,capY-1,14,1,WIZ);
+      add(31,capY-6,1,1,GOLD2);
+      break;
+    case 'crown':
+      if(crownCut){
+        // sliced clean down the middle — halves drift apart and sag.
+        add(26,capY-3,1,2,GOLD);
+        add(25,capY-1,5,2,GOLD);
+        add(28,capY,1,1,GLOW);
+        add(37,capY-3,1,2,GOLD);
+        add(33,capY-1,5,2,GOLD);
+        add(35,capY,1,1,GLOW);
+      } else {
+        // slow three-color shimmer — reads as a subtle glow, not a strobe.
+        const pulse = Math.floor(performance.now()/180)%3;
+        const shine = pulse===0?GOLD2:pulse===1?GLOW:GOLD;
+        add(27,capY-4,1,2,GOLD);
+        add(31,capY-4,2,2,GOLD);
+        add(36,capY-4,1,2,GOLD);
+        add(27,capY-2,10,2,GOLD);
+        add(29,capY-1,1,1,shine);
+        add(34,capY-1,1,1,shine);
+        if(pulse!==1){
+          add(30,capY-5,1,1,GOLD2);
+          add(35,capY-5,1,1,GOLD2);
+        }
+      }
+      break;
+    case 'specs':
+      [ex1,ex2].forEach(ex=>{
+        add(ex-1,ey-1,4,1,DOT_ON);
+        add(ex-1,ey+2,4,1,DOT_ON);
+        add(ex-1,ey,1,2,DOT_ON);
+        add(ex+2,ey,1,2,DOT_ON);
+      });
+      add(ex1+3,ey,4,1,DOT_ON);
+      break;
+  }
   return C;
 }
 function blit(cells,ox=0,oy=0,recolor=null){
@@ -270,6 +330,20 @@ A.boss={name:'Boss battle',len:44,still:40,draw(f){
 }};
 
 A.wrong={name:'Wrong answer',len:40,still:2,draw(f){
+  // a bolt strikes from directly overhead in the first 3 frames — the shock
+  // is what cracks the heart. A worn crown is the first thing hit: it stays
+  // visibly cut for the rest of the sequence.
+  const crownCut = f>=1;
+  if(f<3){
+    let bx=32;
+    for(let i=0;i<6;i++){
+      const by0=Math.floor((i/6)*20), by1=Math.floor(((i+1)/6)*20);
+      const bx2=bx+Math.round((R(i,40)-.5)*6);
+      px(Math.min(bx,bx2),by0,GOLD2,Math.abs(bx2-bx)+2,Math.max(1,by1-by0));
+      bx=bx2;
+    }
+    if(f===1) px(18,18,GOLD2,28,1);
+  }
   // heart cracks first, then he can't take it
   if(f<4) heart(30,14);
   else if(f<6){heart(30,14); px(30,14,BG); px(30,15,BG); px(29,16,BG);}
@@ -280,10 +354,10 @@ A.wrong={name:'Wrong answer',len:40,still:2,draw(f){
   }
   const ox=f===1?-2:f>=2?-3:0, dy=f===1?-2:0;
   if(f<6){
-    blit(guyCells({dy,eyes:f>=2?'x':'normal'}),ox);
+    blit(guyCells({dy,eyes:f>=2?'x':'normal',crownCut}),ox);
   } else if(f<19){
     // EXPLODE into particles
-    const t=f-6, cells=guyCells({eyes:'x'});
+    const t=f-6, cells=guyCells({eyes:'x',crownCut});
     cells.forEach(([x,y,c],i)=>{
       const dx=x-32, dyc=y-31;
       const m=Math.max(1,Math.hypot(dx,dyc));
@@ -293,13 +367,13 @@ A.wrong={name:'Wrong answer',len:40,still:2,draw(f){
     });
   } else if(f>=25&&f<34){
     // pieces drift back together
-    const k=1-Math.pow(1-(f-25)/8,3), cells=guyCells({eyes:'closed'});
+    const k=1-Math.pow(1-(f-25)/8,3), cells=guyCells({eyes:'closed',crownCut});
     cells.forEach(([x,y,c],i)=>{
       const fx=x+(R(i)-.5)*44, fy=y-(6+R(i,3)*26);
       px(Math.round(fx+(x-fx)*k), Math.round(fy+(y-fy)*k), c);
     });
   } else if(f>=34){
-    blit(guyCells({eyes:f<37?'closed':'normal'}));  // determined blink
+    blit(guyCells({eyes:f<37?'closed':'normal',crownCut}));  // determined blink
   }
 }};
 
@@ -500,6 +574,21 @@ function sync(){
   [...bar.children].forEach(b=>b.classList.toggle('on',b.dataset.k===cur));
 }
 sync();
+
+// wearables — same rig every animation draws through, so any cosmetic
+// works with any animation for free.
+const WEARS=[['none','No wear'],['cap','Cap'],['wizard','Wizard hat'],['crown','Crown'],['specs','Specs']];
+const wearBar=document.getElementById('wearBar');
+WEARS.forEach(([k,label])=>{
+  const b=document.createElement('button');
+  b.className='mini'; b.textContent=label; b.dataset.w=k;
+  b.onclick=()=>{ACTIVE_WEAR=k; syncWear();};
+  wearBar.appendChild(b);
+});
+function syncWear(){
+  [...wearBar.children].forEach(b=>b.classList.toggle('on',b.dataset.w===ACTIVE_WEAR));
+}
+syncWear();
 
 themeBtn.onclick=()=>applyTheme(theme==='dark'?'light':'dark');
 let saved=null;

@@ -8,7 +8,7 @@
  */
 
 import { WORLDS, type WorldDefinition } from "@/lib/gamification/worlds";
-import { getLessonSession, type CodeStep, type LessonStep } from "@/lib/data/lessons";
+import { getLessonSession, type LessonStep } from "@/lib/data/lessons";
 import { DEMO_USER } from "@/lib/data/demo-user";
 
 export type BossStage = {
@@ -21,6 +21,25 @@ export type BossStage = {
 
 export type ProjectSize = "small" | "big";
 
+/** One graded requirement: a substring the submission must contain, and the
+ * critique shown when it's missing. Grading is exact — there's no partial
+ * credit and no hand-holding template to fill in. */
+export type ProjectRequirement = {
+  needle: string;
+  critique: string;
+};
+
+/** The brief for the boss's project: a blank slate, not a fill-in-the-blank. */
+export type ProjectBrief = {
+  prompt: string;
+  language: string;
+  starterCode: string;
+  requirements: ProjectRequirement[];
+  hint: string;
+  /** Shown, verbatim, only when every requirement passes. */
+  passVerdict: string;
+};
+
 /** The boss's finale: a project the player ships and "publishes" to GitHub. */
 export type BossProject = {
   size: ProjectSize;
@@ -28,8 +47,19 @@ export type BossProject = {
   repoName: string;
   commitSha: string;
   filesChanged: number;
-  step: CodeStep;
+  brief: ProjectBrief;
 };
+
+/** Pure grading function: returns the requirements the submission fails. */
+export function evaluateProject(
+  code: string,
+  requirements: ProjectRequirement[],
+): ProjectRequirement[] {
+  const normalized = code.replace(/\s+/g, " ");
+  return requirements.filter(
+    (r) => !normalized.includes(r.needle.replace(/\s+/g, " ")),
+  );
+}
 
 export type BossBattle = {
   nodeId: string;
@@ -89,141 +119,248 @@ const BOSS_NAMES: Record<string, { name: string; tagline: string }> = {
 };
 
 /**
- * The "Ship It" finale: a hand-authored small project per world, graded the
- * same way as any other code step (substring checks against mustInclude).
+ * The "Ship It" finale: a hand-authored project brief per world. There is no
+ * template to fill in — the starter is a blank file with a one-line pointer,
+ * and every requirement is graded exactly, with a harsh critique on miss.
  * Worlds without a hand-authored spec fall back to a generic README project.
  */
 type ProjectSpec = {
   repoName: string;
-  step: Omit<CodeStep, "type">;
+  brief: ProjectBrief;
 };
 
 const PROJECT_SPECS: Record<string, ProjectSpec> = {
   "claude-basics": {
     repoName: "claude-basics-starter",
-    step: {
+    brief: {
       prompt:
-        "Ship It: rewrite this vague debugging ask into one Claude can't misread.",
+        "Ship It: a teammate's bug report is one line — \"my code is broken, please fix it.\" Write the report Claude would actually need. From scratch.",
       language: "markdown",
-      starterCode: "My code is broken, please fix it.\n",
-      mustInclude: ["Expected:", "Actual:", "```"],
-      hint: "Add an Expected: line, an Actual: line, and paste the code in a fenced ``` block.",
-      explanation:
-        "Expected vs. actual, plus the code itself, turns a guess into a precise fix.",
+      starterCode: "<!-- write the bug report here -->\n",
+      requirements: [
+        {
+          needle: "Expected:",
+          critique: "No Expected: line. Claude has no idea what \"working\" looks like — it's guessing at a target that doesn't exist on the page.",
+        },
+        {
+          needle: "Actual:",
+          critique: "No Actual: line. Without the real symptom, this isn't a bug report, it's a complaint.",
+        },
+        {
+          needle: "```",
+          critique: "No fenced code block. Claude is now debugging your prose instead of your code.",
+        },
+      ],
+      hint: "Expected:, Actual:, and the code itself in a ``` block — that's the whole report.",
+      passVerdict: "Ships. Expected, actual, code — nothing left for Claude to hallucinate.",
     },
   },
   "prompt-engineering": {
     repoName: "prompt-template-kit",
-    step: {
-      prompt: "Ship It: turn this one-off ask into a reusable template.",
+    brief: {
+      prompt:
+        "Ship It: a coworker keeps re-typing the same blog-post request every week and getting a different result each time. Build the reusable template that fixes it. From scratch.",
       language: "markdown",
-      starterCode: "Write me a blog post about {topic}\n",
-      mustInclude: ["{topic}", "Tone:", "Audience:", "Format:"],
-      hint: "Add Tone:, Audience:, and Format: lines above the ask, and keep the {topic} placeholder.",
-      explanation:
-        "Lock in role, tone, audience, and format once and the template produces consistent output forever.",
+      starterCode: "<!-- write the template here -->\n",
+      requirements: [
+        {
+          needle: "{topic}",
+          critique: "No {topic} placeholder. This is a one-off request wearing a template's clothes — it can't be reused.",
+        },
+        {
+          needle: "Tone:",
+          critique: "No Tone: field. Every run will read differently and nobody will know why.",
+        },
+        {
+          needle: "Audience:",
+          critique: "No Audience: field. Same words, wrong reader, wasted output.",
+        },
+        {
+          needle: "Format:",
+          critique: "No Format: field. You'll get a wall of prose when you needed bullet points, forever.",
+        },
+      ],
+      hint: "A real template names its slot ({topic}) and locks Tone:, Audience:, and Format: above it.",
+      passVerdict: "Ships. Same template, same shape, every single run.",
     },
   },
   "claude-code": {
     repoName: "subagent-rename-task",
-    step: {
-      prompt: "Ship It: write the subagent task prompt for a repo-wide rename.",
+    brief: {
+      prompt:
+        "Ship It: a subagent needs to rename `oldName` to `newName` across the repo. It has zero memory of this conversation. Write its entire task prompt. From scratch.",
       language: "markdown",
-      starterCode: "rename oldName to newName everywhere\n",
-      mustInclude: ["Goal:", "Scope:", "Report back:"],
-      hint: "State the Goal:, the Scope: (which files), and what to Report back: when done.",
-      explanation:
-        "Subagents have no memory of this conversation — the task prompt is the only context they get.",
+      starterCode: "<!-- write the subagent task prompt here -->\n",
+      requirements: [
+        {
+          needle: "Goal:",
+          critique: "No Goal:. The subagent doesn't know what \"done\" means and will either under- or over-deliver.",
+        },
+        {
+          needle: "Scope:",
+          critique: "No Scope:. It'll either miss files it should touch or rewrite files it shouldn't.",
+        },
+        {
+          needle: "Report back:",
+          critique: "No Report back:. You'll get a vague \"done!\" instead of what actually changed.",
+        },
+      ],
+      hint: "State the Goal:, the Scope: (which files/dirs), and what to Report back: when finished.",
+      passVerdict: "Ships. The subagent can run this without ever seeing this conversation.",
     },
   },
   git: {
     repoName: "hotfix-drill",
-    step: {
-      prompt: "Ship It: branch, commit, and merge a one-line hotfix.",
+    brief: {
+      prompt:
+        "Ship It: production is broken. Branch, fix, commit, and merge the hotfix into main — the whole loop, every command. From scratch.",
       language: "shell",
-      starterCode: "# fix the bug on a branch, then ship it\n",
-      mustInclude: [
-        "git switch -c hotfix",
-        "git add",
-        "git commit",
-        "git switch main",
-        "git merge hotfix",
+      starterCode: "# write every command, in order\n",
+      requirements: [
+        {
+          needle: "git switch -c hotfix",
+          critique: "Never branched. You were about to commit the fix straight to main.",
+        },
+        { needle: "git add", critique: "Never staged the fix — there's nothing for a commit to pick up." },
+        { needle: "git commit", critique: "Staged and stopped. The fix still isn't committed anywhere." },
+        {
+          needle: "git switch main",
+          critique: "Never switched back. The merge you're about to run would go nowhere.",
+        },
+        {
+          needle: "git merge hotfix",
+          critique: "Never merged. The fix is sitting on a branch nobody deploys.",
+        },
       ],
-      hint: "Branch, stage, commit, switch back to main, merge — five commands.",
-      explanation:
-        "This is the whole feature-branch loop in five commands. Muscle memory now saves you later.",
+      hint: "Branch, stage, commit, switch back to main, merge — five commands, in that order.",
+      passVerdict: "Ships. Branched, committed, merged — production is fixed.",
     },
   },
   github: {
     repoName: "open-pr-drill",
-    step: {
-      prompt: "Ship It: push the branch and open the pull request the right way.",
+    brief: {
+      prompt:
+        "Ship It: push your branch so it's tracked upstream, then open the pull request without touching the browser. From scratch.",
       language: "shell",
-      starterCode: "git push\n",
-      mustInclude: ["git push -u origin", "gh pr create"],
-      hint: "Push with -u to set the upstream branch, then open the PR with gh pr create.",
-      explanation:
-        "-u remembers the branch mapping so future pushes are just `git push`; gh pr create skips the browser.",
+      starterCode: "# write the commands\n",
+      requirements: [
+        {
+          needle: "git push -u origin",
+          critique: "No -u. Every future push on this branch will fail with \"no upstream branch\" until someone fixes it.",
+        },
+        {
+          needle: "gh pr create",
+          critique: "Pushed and stopped. Nobody knows there's a PR to review because there isn't one.",
+        },
+      ],
+      hint: "Push with -u to set the upstream, then gh pr create to open it.",
+      passVerdict: "Ships. Upstream tracked, PR open, no browser required.",
     },
   },
   terminal: {
     repoName: "port-cleanup-drill",
-    step: {
-      prompt: "Ship It: find and kill whatever is hogging port 3000.",
+    brief: {
+      prompt:
+        "Ship It: something is squatting on port 3000 and your dev server won't start. Find it and kill it. From scratch.",
       language: "shell",
-      starterCode: "# find what's on port 3000 and stop it\n",
-      mustInclude: ["lsof -i :3000", "kill"],
-      hint: "lsof -i :3000 lists what's bound to the port; kill <pid> stops it.",
-      explanation:
-        "lsof -i is the fastest way to find a port squatter before reaching for pkill.",
+      starterCode: "# find it, then stop it\n",
+      requirements: [
+        {
+          needle: "lsof -i :3000",
+          critique: "Never looked. You'd be killing processes blind, hoping one of them is the squatter.",
+        },
+        { needle: "kill", critique: "Found it, then did nothing. The port is still held." },
+      ],
+      hint: "lsof -i :3000 finds the PID; kill <pid> ends it.",
+      passVerdict: "Ships. Port's free, server starts.",
     },
   },
   react: {
     repoName: "use-effect-fix",
-    step: {
-      prompt: "Ship It: fix the missing dependency array before it ships.",
+    brief: {
+      prompt:
+        "Ship It: a profile page refetches the user on every single render and the tab is on fire. Write the effect that only fetches when userId actually changes. From scratch.",
       language: "javascript",
-      starterCode: "useEffect(() => {\n  fetchUser(userId);\n});\n",
-      mustInclude: ["useEffect(() => {", "}, [userId]);"],
-      hint: "Add a dependency array as the second argument to useEffect, with userId inside it.",
-      explanation:
-        "No array re-runs on every render; the right array runs only when userId actually changes.",
+      starterCode: "// write the fixed effect here\n",
+      requirements: [
+        {
+          needle: "useEffect(",
+          critique: "No useEffect at all — the fetch is still running in the render body, which is how you got here.",
+        },
+        {
+          needle: "fetchUser(userId)",
+          critique: "The effect exists but never actually fetches the user — nothing loads.",
+        },
+        {
+          needle: "[userId]",
+          critique: "No dependency array with userId. Either it reruns every render (no array) or never reruns when the id changes (empty array).",
+        },
+      ],
+      hint: "useEffect(() => { fetchUser(userId); }, [userId]) — the array is the whole fix.",
+      passVerdict: "Ships. Refetches only when userId changes. The tab stops smoking.",
     },
   },
   javascript: {
     repoName: "undefined-guard",
-    step: {
-      prompt: "Ship It: stop the undefined crash before it reaches production.",
+    brief: {
+      prompt:
+        "Ship It: getName(user) throws in production whenever profile is missing. Make it never crash, with a sane fallback. From scratch.",
       language: "javascript",
-      starterCode: "function getName(user) {\n  return user.profile.name;\n}\n",
-      mustInclude: ["?.", "??"],
-      hint: "Optional chaining (?.) stops the crash; nullish coalescing (??) gives a fallback.",
-      explanation:
-        "user?.profile?.name ?? 'Unknown' never throws, even when profile is missing.",
+      starterCode: "// write the safe getName function here\n",
+      requirements: [
+        {
+          needle: "?.",
+          critique: "No optional chaining. One missing profile and this still throws in production.",
+        },
+        {
+          needle: "??",
+          critique: "No nullish coalescing. It won't crash, but callers get undefined instead of a real fallback.",
+        },
+      ],
+      hint: "user?.profile?.name ?? 'Unknown' — chain through the maybe-missing parts, then fall back.",
+      passVerdict: "Ships. Missing profile, missing user, doesn't matter — it never throws.",
     },
   },
   typescript: {
     repoName: "type-the-any",
-    step: {
-      prompt: "Ship It: replace any with a real type before it ships.",
+    brief: {
+      prompt:
+        "Ship It: getTotal(items: any) shipped a typo (`.pric` instead of `.price`) straight to prod because any caught nothing. Give the items a real type. From scratch.",
       language: "typescript",
-      starterCode:
-        "function getTotal(items: any) {\n  return items.reduce((sum, i) => sum + i.price, 0);\n}\n",
-      mustInclude: ["interface", "number"],
-      hint: "Define an interface for the item shape (at least a price: number field) instead of any.",
-      explanation: "A real type catches the typo at compile time instead of in production.",
+      starterCode: "// write the typed getTotal function here\n",
+      requirements: [
+        {
+          needle: "interface",
+          critique: "No interface. `any` is still `any` — the same typo ships again next week.",
+        },
+        {
+          needle: "number",
+          critique: "No number field on the type. A shape with no real fields is just any wearing a costume.",
+        },
+      ],
+      hint: "Define an interface with at least a price: number field, and type items against it.",
+      passVerdict: "Ships. The next typo is a compile error, not a production incident.",
     },
   },
   sql: {
     repoName: "join-fix-drill",
-    step: {
-      prompt: "Ship It: fix the query before it joins every row with every row.",
+    brief: {
+      prompt:
+        "Ship It: SELECT * FROM orders, customers is joining every order with every customer. Write the query that only pairs the right ones. From scratch.",
       language: "sql",
-      starterCode: "SELECT * FROM orders, customers;\n",
-      mustInclude: ["JOIN", "ON"],
-      hint: "Use an explicit JOIN with an ON condition instead of a comma join.",
-      explanation:
-        "A comma join with no WHERE is a cartesian product — every order paired with every customer. JOIN...ON fixes it.",
+      starterCode: "-- write the fixed query here\n",
+      requirements: [
+        {
+          needle: "JOIN",
+          critique: "No JOIN. This is still a comma join — a cartesian product waiting to happen again.",
+        },
+        {
+          needle: "ON",
+          critique: "JOIN with no ON. Without the condition, the database has no idea which rows actually belong together.",
+        },
+      ],
+      hint: "An explicit JOIN ... ON <condition> replaces the comma and states which columns must match.",
+      passVerdict: "Ships. Every order paired with exactly its own customer.",
     },
   },
 };
@@ -231,13 +368,26 @@ const PROJECT_SPECS: Record<string, ProjectSpec> = {
 function fallbackProjectSpec(world: WorldDefinition): ProjectSpec {
   return {
     repoName: `${world.slug}-capstone`,
-    step: {
-      prompt: `Ship It: write the README for your ${world.title} capstone.`,
+    brief: {
+      prompt: `Ship It: write the README for your ${world.title} capstone. From scratch — no scaffold.`,
       language: "markdown",
-      starterCode: "# My Project\n",
-      mustInclude: ["## ", "learned"],
-      hint: "Add a '#' title, a '##' section heading, and mention one thing you learned.",
-      explanation: "Every project ships with a README. Future you will thank present you.",
+      starterCode: "<!-- write the README here -->\n",
+      requirements: [
+        {
+          needle: world.title,
+          critique: `Never names ${world.title} anywhere. A reader landing on this repo can't tell what it's even for.`,
+        },
+        {
+          needle: "## ",
+          critique: "No section heading. A README that's one undifferentiated paragraph doesn't get read.",
+        },
+        {
+          needle: "learned",
+          critique: "Never says what you learned. A capstone README with no reflection is just a file listing.",
+        },
+      ],
+      hint: `A title mentioning ${world.title}, a '##' section, and a line about what you learned — that's the minimum.`,
+      passVerdict: "Ships. Future you will thank present you for writing this down.",
     },
   };
 }
@@ -258,8 +408,14 @@ function buildProject(world: WorldDefinition, nodeId: string): BossProject {
     repoName: spec.repoName,
     commitSha: fakeSha(nodeId),
     filesChanged: size === "small" ? 3 + (world.order % 3) : 9 + (world.order % 5),
-    step: { type: "code", ...spec.step },
+    brief: spec.brief,
   };
+}
+
+/** A project stage has no LessonStep content of its own, but still counts as
+ * one attack against the boss's HP, same as any other step. */
+export function stageAttacks(stage: BossStage): number {
+  return stage.kind === "project" ? 1 : stage.steps.length;
 }
 
 const FALLBACK_EPITHETS = [
@@ -350,9 +506,9 @@ export function getBossBattle(nodeId: string): BossBattle | null {
     title: "Ship It",
     intro:
       project.size === "big"
-        ? "One last, bigger build. Then it ships to GitHub."
-        : "One last small build. Then it ships to GitHub.",
-    steps: [project.step],
+        ? "One last, bigger build — from a blank file. Then it's judged, and it ships to GitHub."
+        : "One last small build — from a blank file. Then it's judged, and it ships to GitHub.",
+    steps: [],
     kind: "project",
   };
   const stages = [...combatStages, projectStage];

@@ -20,7 +20,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { LittleGuy } from "@/components/mascot/little-guy";
-import type { BossBattle } from "@/lib/data/boss";
+import { stageAttacks, type BossBattle } from "@/lib/data/boss";
+import { BossProjectStage } from "./boss-project-stage";
 import { StepRenderer } from "./lesson-player";
 import { cn } from "@/lib/utils";
 
@@ -80,9 +81,9 @@ export function BossPlayer({ battle }: { battle: BossBattle }) {
   const [attempts, setAttempts] = useState(0);
   const [defeatReason, setDefeatReason] = useState<"hearts" | "time">("hearts");
 
-  const maxHp = battle.stages.reduce((n, s) => n + s.steps.length, 0);
+  const maxHp = battle.stages.reduce((n, s) => n + stageAttacks(s), 0);
   const cleared =
-    battle.stages.slice(0, stageIndex).reduce((n, s) => n + s.steps.length, 0) +
+    battle.stages.slice(0, stageIndex).reduce((n, s) => n + stageAttacks(s), 0) +
     stepIndex;
   const bossHp = maxHp - cleared;
   const stage = battle.stages[stageIndex];
@@ -401,7 +402,11 @@ export function BossPlayer({ battle }: { battle: BossBattle }) {
               exit={{ opacity: 0, x: -32 }}
               transition={{ duration: 0.25 }}
             >
-              <StepRenderer step={stage.steps[stepIndex]} onResult={handleResult} />
+              {stage.kind === "project" ? (
+                <BossProjectStage brief={battle.project.brief} onResult={handleResult} />
+              ) : (
+                <StepRenderer step={stage.steps[stepIndex]} onResult={handleResult} />
+              )}
             </motion.div>
           </AnimatePresence>
         </>

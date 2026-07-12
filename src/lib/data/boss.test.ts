@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { WORLDS } from "@/lib/gamification/worlds";
-import { getBossBattle, isBossNode } from "./boss";
+import { evaluateProject, getBossBattle, isBossNode } from "./boss";
 
 describe("boss battles", () => {
   it("recognizes exactly the last node of each world as a boss", () => {
@@ -41,8 +41,8 @@ describe("boss battles", () => {
       const last = battle.stages.at(-1)!;
       expect(last.kind).toBe("project");
       expect(last.title).toBe("Ship It");
-      expect(last.steps).toHaveLength(1);
-      expect(last.steps[0].type).toBe("code");
+      // The project stage has no scripted lesson steps — it's a blank brief.
+      expect(last.steps).toHaveLength(0);
 
       const project = battle.project;
       expect(["small", "big"]).toContain(project.size);
@@ -50,7 +50,39 @@ describe("boss battles", () => {
       expect(project.repoName.length).toBeGreaterThan(0);
       expect(project.commitSha).toMatch(/^[0-9a-f]{7}$/);
       expect(project.filesChanged).toBeGreaterThan(0);
-      expect(project.step).toBe(last.steps[0]);
+
+      const brief = project.brief;
+      expect(brief.prompt.length).toBeGreaterThan(0);
+      expect(brief.requirements.length).toBeGreaterThan(0);
+      expect(brief.passVerdict.length).toBeGreaterThan(0);
+      // Starter is a blank pointer, not a fill-in-the-blank template — it
+      // must not already satisfy any of the graded requirements.
+      expect(evaluateProject(brief.starterCode, brief.requirements)).toHaveLength(
+        brief.requirements.length,
+      );
+    }
+  });
+
+  it("grades project submissions exactly, with a distinct critique per miss", () => {
+    for (const world of WORLDS) {
+      const { brief } = getBossBattle(`${world.slug}-${world.lessonCount - 1}`)!.project;
+
+      // A submission containing every required needle passes clean.
+      const perfect = brief.requirements.map((r) => r.needle).join("\n");
+      expect(evaluateProject(perfect, brief.requirements)).toHaveLength(0);
+
+      // Missing exactly one requirement fails exactly that one, with its
+      // own critique text (never a generic message).
+      if (brief.requirements.length > 1) {
+        const missingOne = brief.requirements
+          .slice(1)
+          .map((r) => r.needle)
+          .join("\n");
+        const failed = evaluateProject(missingOne, brief.requirements);
+        expect(failed).toHaveLength(1);
+        expect(failed[0]).toBe(brief.requirements[0]);
+        expect(failed[0].critique.length).toBeGreaterThan(0);
+      }
     }
   });
 

@@ -560,7 +560,9 @@ A.comeback={name:'Streak lost / comeback',len:56,still:52,draw(f){
 
 // ---------- UI + loop ----------
 const order=['lesson','streak','boss','wrong','level','idle','think','chest','comeback'];
-let cur='lesson', start=performance.now();
+// Idle is the resting state: whenever no specific event animation (lesson
+// complete, streak, boss, etc.) is playing, the guy loops idle forever.
+let cur='idle', start=performance.now();
 const bar=document.getElementById('bar'), nameEl=document.getElementById('animName');
 const themeBtn=document.getElementById('themeBtn');
 order.forEach(k=>{

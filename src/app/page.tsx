@@ -3,7 +3,6 @@ import { Hero } from "@/components/marketing/hero";
 import { FeatureCards } from "@/components/marketing/feature-cards";
 import { Roadmap } from "@/components/marketing/roadmap";
 import { HowItWorks } from "@/components/marketing/how-it-works";
-import { Testimonials } from "@/components/marketing/testimonials";
 import { Pricing } from "@/components/marketing/pricing";
 import { Faq } from "@/components/marketing/faq";
 import { CtaBand } from "@/components/marketing/cta-band";
@@ -18,7 +17,6 @@ export default function Home() {
         <FeatureCards />
         <Roadmap />
         <HowItWorks />
-        <Testimonials />
         <Pricing />
         <Faq />
         <CtaBand />

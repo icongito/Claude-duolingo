@@ -7,6 +7,7 @@ import { Lightbulb, Loader2, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { CodeStep } from "@/lib/data/lessons";
 import { cn } from "@/lib/utils";
+import "@/lib/monaco-loader";
 
 const MonacoEditor = dynamic(
   () => import("@monaco-editor/react").then((m) => m.default),

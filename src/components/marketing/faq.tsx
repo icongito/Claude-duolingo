@@ -14,11 +14,11 @@ const FAQS = [
   },
   {
     q: "Is CodeQuest really free?",
-    a: "Yes — all 25 worlds, XP, streaks, and achievements are free forever, supported by a short ad after each lesson. Premium removes the ads and adds unlimited hearts, a monthly gem stipend, and a faster AI Mentor.",
+    a: "Yes: all 25 worlds, XP, streaks, and achievements are free forever, supported by a short ad after each lesson. Premium removes the ads and adds unlimited hearts, a monthly gem stipend, and a faster AI Mentor.",
   },
   {
     q: "What can Premium buy that Free can't?",
-    a: "Nothing that affects difficulty or outcomes — every world and lesson is the same for everyone. Premium buys convenience and cosmetics: no ads, unlimited hearts, more gems, and mascot wearables. CodeQuest is never pay-to-win.",
+    a: "Nothing that affects difficulty or outcomes. Every world and lesson is the same for everyone. Premium buys convenience and cosmetics: no ads, unlimited hearts, more gems, and mascot wearables. CodeQuest is never pay-to-win.",
   },
   {
     q: "How is this different from watching tutorials?",
@@ -26,11 +26,11 @@ const FAQS = [
   },
   {
     q: "Can I switch or cancel my plan anytime?",
-    a: "Yes — upgrade, downgrade, or cancel whenever you want from Settings. There's no lock-in, and downgrading never takes away XP, streaks, or achievements you've already earned.",
+    a: "Yes: upgrade, downgrade, or cancel whenever you want from Settings. There's no lock-in, and downgrading never takes away XP, streaks, or achievements you've already earned.",
   },
   {
     q: "What happens if I miss a day and lose my streak?",
-    a: "You can earn streak freezes through play, or purchase one with coins you've already earned in-game — never with real money beyond a cosmetic season pass.",
+    a: "You can earn streak freezes through play, or purchase one with coins you've already earned in-game, never with real money beyond a cosmetic season pass.",
   },
 ];
 

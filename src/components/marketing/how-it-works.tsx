@@ -12,7 +12,7 @@ const STEPS = [
   {
     icon: Map,
     title: "Follow the map",
-    description: "Walk a guided path of lessons, quizzes, and mini projects — one glowing node at a time.",
+    description: "Walk a guided path of lessons, quizzes, and mini projects, one glowing node at a time.",
   },
   {
     icon: Code,

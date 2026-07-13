@@ -16,7 +16,7 @@ const FEATURES = [
     icon: TerminalSquare,
     title: "Real code, not just quizzes",
     description:
-      "Monaco-powered editors, live terminals, and sandboxes — you write actual code, not just pick an answer.",
+      "Monaco-powered editors, live terminals, and sandboxes: you write actual code, not just pick an answer.",
   },
   {
     icon: Bot,
@@ -28,7 +28,7 @@ const FEATURES = [
     icon: Trophy,
     title: "250+ achievements",
     description:
-      "From your first prompt to Grandmaster status — every milestone is tracked, celebrated, and shareable.",
+      "From your first prompt to Grandmaster status, every milestone is tracked, celebrated, and shareable.",
   },
   {
     icon: Swords,
@@ -40,7 +40,7 @@ const FEATURES = [
     icon: Users,
     title: "Guilds & leaderboards",
     description:
-      "Study with friends, join a guild, and climb weekly leaderboards — learning is better with company.",
+      "Study with friends, join a guild, and climb weekly leaderboards. Learning is better with company.",
   },
   {
     icon: BarChart3,

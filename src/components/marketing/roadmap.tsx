@@ -25,7 +25,7 @@ export function Roadmap() {
             One path. Twenty-five worlds.
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
-            Every world unlocks the next. No overwhelming syllabus — just the
+            Every world unlocks the next. No overwhelming syllabus, just the
             next glowing node on the map.
           </p>
         </div>

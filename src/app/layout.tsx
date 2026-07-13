@@ -34,11 +34,11 @@ const pixelifySans = Pixelify_Sans({
 
 export const metadata: Metadata = {
   title: {
-    default: "CodeQuest — Level Up as a Developer",
+    default: "CodeQuest: Level Up as a Developer",
     template: "%s · CodeQuest",
   },
   description:
-    "CodeQuest is the addictive, Duolingo-style way to master Claude Code, AI development, and modern software engineering — one glowing lesson at a time.",
+    "CodeQuest is the addictive, Duolingo-style way to master Claude Code, AI development, and modern software engineering, one glowing lesson at a time.",
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_SITE_URL ?? "https://codequest.dev",
   ),

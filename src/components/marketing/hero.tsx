@@ -56,7 +56,7 @@ export function Hero() {
             <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
               <Button size="lg" asChild>
                 <Link href="/sign-up">
-                  Start your quest <ArrowRight className="size-4" />
+                  Start your quest free <ArrowRight className="size-4" />
                 </Link>
               </Button>
               <Button size="lg" variant="secondary" asChild>

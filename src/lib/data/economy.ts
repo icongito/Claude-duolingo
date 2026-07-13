@@ -97,7 +97,7 @@ export const PLANS: SubscriptionPlan[] = [
       "3 hearts, refilled daily",
       "AI Mentor: 10 messages/day (fast model)",
       "Earn gems through quests and boss battles",
-      "Ad-supported — a short ad card after lessons",
+      "Ad-supported, a short ad card after lessons",
     ],
   },
   {
@@ -114,8 +114,8 @@ export const PLANS: SubscriptionPlan[] = [
     mentorModelId: "claude-sonnet-5",
     mentorDailyMessages: 15,
     features: [
-      "Everything in Free — minus the ads",
-      "Unlimited hearts — mistakes cost nothing",
+      "Everything in Free, minus the ads",
+      "Unlimited hearts, mistakes cost nothing",
       "One free streak repair every month",
       "30 gems/month stipend",
       "AI Mentor: 15 messages/day on the smart model",
@@ -436,9 +436,9 @@ export const DEMO_BILLING: BillingInfo = {
 };
 
 export const DEMO_INVOICES: Invoice[] = [
-  { id: "inv-0007", date: "2026-07-02", description: "Premium — monthly", amountUsd: 6.99, status: "paid" },
-  { id: "inv-0006", date: "2026-06-02", description: "Premium — monthly", amountUsd: 6.99, status: "paid" },
-  { id: "inv-0005", date: "2026-05-02", description: "Premium — monthly", amountUsd: 6.99, status: "paid" },
+  { id: "inv-0007", date: "2026-07-02", description: "Premium (monthly)", amountUsd: 6.99, status: "paid" },
+  { id: "inv-0006", date: "2026-06-02", description: "Premium (monthly)", amountUsd: 6.99, status: "paid" },
+  { id: "inv-0005", date: "2026-05-02", description: "Premium (monthly)", amountUsd: 6.99, status: "paid" },
   { id: "inv-0004", date: "2026-04-11", description: "Gem Pouch (55 gems)", amountUsd: 4.99, status: "paid" },
-  { id: "inv-0003", date: "2026-04-02", description: "Premium — monthly", amountUsd: 6.99, status: "paid" },
+  { id: "inv-0003", date: "2026-04-02", description: "Premium (monthly)", amountUsd: 6.99, status: "paid" },
 ];

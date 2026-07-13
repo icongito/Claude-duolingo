@@ -27,7 +27,7 @@ export function Pricing() {
             Cosmetic upgrades only. Never pay-to-win.
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
-            All 25 worlds are free, forever — Free is just ad-supported.
+            All 25 worlds are free, forever. Free is just ad-supported.
             Premium removes the ads and adds unlimited hearts, gems, and a
             faster AI Mentor.
           </p>

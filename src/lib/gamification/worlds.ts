@@ -35,7 +35,7 @@ export const WORLDS: WorldDefinition[] = [
     title: "Prompt Engineering",
     subtitle: "Speak the model's language",
     description:
-      "Structure, context, examples, and iteration — the craft of writing prompts that work.",
+      "Structure, context, examples, and iteration: the craft of writing prompts that work.",
     icon: "MessageSquareText",
     colorFrom: "#FF7A1A",
     colorTo: "#FF9E3D",
@@ -276,7 +276,7 @@ export const WORLDS: WorldDefinition[] = [
     order: 22,
     title: "Testing",
     subtitle: "Ship without fear",
-    description: "Unit, integration, and end-to-end tests — and what's worth testing at all.",
+    description: "Unit, integration, and end-to-end tests, and what's worth testing at all.",
     icon: "FlaskConical",
     colorFrom: "#FF7A1A",
     colorTo: "#FF9E3D",

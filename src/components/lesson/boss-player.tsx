@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   CloudUpload,
@@ -80,6 +80,8 @@ export function BossPlayer({ battle }: { battle: BossBattle }) {
   const [timeLeft, setTimeLeft] = useState(battle.timeLimitSeconds);
   const [attempts, setAttempts] = useState(0);
   const [defeatReason, setDefeatReason] = useState<"hearts" | "time">("hearts");
+  const [combatFx, setCombatFx] = useState<{ kind: "hit" | "miss"; id: number } | null>(null);
+  const fxId = useRef(0);
 
   const maxHp = battle.stages.reduce((n, s) => n + stageAttacks(s), 0);
   const cleared =
@@ -112,18 +114,28 @@ export function BossPlayer({ battle }: { battle: BossBattle }) {
     return () => clearTimeout(id);
   }, [phase]);
 
+  // Combat flash (mascot punch / hit-taken shake) is a beat, not a state.
+  useEffect(() => {
+    if (!combatFx) return;
+    const id = setTimeout(() => setCombatFx(null), 500);
+    return () => clearTimeout(id);
+  }, [combatFx]);
+
   function reset() {
     setStageIndex(0);
     setStepIndex(0);
     setHearts(MAX_HEARTS);
     setTimeLeft(battle.timeLimitSeconds);
     setAttempts(0);
+    setCombatFx(null);
     setPhase("intro");
   }
 
   // A missed attack doesn't advance: the step remounts (via the attempt
   // counter in its key) and must be landed before the boss loses that HP.
   function handleResult(correct: boolean) {
+    fxId.current += 1;
+    setCombatFx({ kind: correct ? "hit" : "miss", id: fxId.current });
     if (!correct) {
       const next = hearts - 1;
       setHearts(next);
@@ -347,6 +359,39 @@ export function BossPlayer({ battle }: { battle: BossBattle }) {
         >
           <X className="size-5" />
         </Link>
+        <motion.div
+          key={combatFx ? `${combatFx.kind}-${combatFx.id}` : "idle"}
+          initial={false}
+          animate={
+            combatFx?.kind === "miss"
+              ? { x: [0, -7, 7, -5, 5, 0] }
+              : combatFx?.kind === "hit"
+                ? { scale: [1, 1.14, 1], rotate: [0, -4, 0] }
+                : {}
+          }
+          transition={{ duration: 0.45, ease: "easeOut" }}
+          className="relative shrink-0"
+        >
+          <LittleGuy animation="boss" size={72} />
+          {combatFx?.kind === "miss" && (
+            <motion.div
+              aria-hidden
+              className="bg-destructive/40 pointer-events-none absolute inset-0 rounded-full"
+              initial={{ opacity: 0.9 }}
+              animate={{ opacity: 0 }}
+              transition={{ duration: 0.45 }}
+            />
+          )}
+          {combatFx?.kind === "hit" && (
+            <motion.div
+              aria-hidden
+              className="bg-primary/40 pointer-events-none absolute inset-0 rounded-full"
+              initial={{ opacity: 0.8, scale: 0.6 }}
+              animate={{ opacity: 0, scale: 1.4 }}
+              transition={{ duration: 0.45 }}
+            />
+          )}
+        </motion.div>
         <BossHpBar hp={bossHp} maxHp={maxHp} name={battle.name} />
         <span
           className={cn(

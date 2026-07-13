@@ -15,9 +15,48 @@ export type BossStage = {
   title: string;
   intro: string;
   steps: LessonStep[];
-  /** "project" stages end in a simulated GitHub publish instead of the next attack. */
-  kind?: "combat" | "project";
+  /** "project" stages end in a simulated GitHub publish instead of the next
+   * attack; "prompt" stages are a single write-your-own-prompt attack graded
+   * for variable damage instead of a fixed hit. */
+  kind?: "combat" | "project" | "prompt";
+  /** Present only when kind === "prompt". */
+  promptAttack?: PromptAttack;
 };
+
+/** One quality a written prompt can demonstrate. Contributes its own share
+ * of damage when present — there's no picking from options, and no
+ * all-or-nothing pass/fail either, just power in, damage out. */
+export type PromptCriterion = {
+  needle: string;
+  power: number;
+  label: string;
+};
+
+/** The boss's opening attack: no multiple choice, no options to lean on —
+ * the player writes the actual prompt and it's judged on power. */
+export type PromptAttack = {
+  scenario: string;
+  placeholder: string;
+  criteria: PromptCriterion[];
+  /** Sum of every criterion's power — the most damage this attack can deal. */
+  maxDamage: number;
+};
+
+/** Pure grading function: scores a written prompt against its criteria and
+ * returns exactly how much damage it deals. */
+export function evaluatePromptPower(
+  text: string,
+  criteria: PromptCriterion[],
+): { damage: number; met: PromptCriterion[]; missed: PromptCriterion[] } {
+  const normalized = text.toLowerCase().replace(/\s+/g, " ");
+  const met: PromptCriterion[] = [];
+  const missed: PromptCriterion[] = [];
+  for (const c of criteria) {
+    if (normalized.includes(c.needle.toLowerCase())) met.push(c);
+    else missed.push(c);
+  }
+  return { damage: met.reduce((n, c) => n + c.power, 0), met, missed };
+}
 
 export type ProjectSize = "small" | "big";
 
@@ -117,6 +156,92 @@ const BOSS_NAMES: Record<string, { name: string; tagline: string }> = {
     tagline: "You forgot the JOIN condition. It didn't.",
   },
 };
+
+/**
+ * The boss's opening attack: a hand-authored write-your-own-prompt scenario
+ * per world. Worlds without a hand-authored spec fall back to a generic one.
+ */
+const PROMPT_ATTACK_SPECS: Record<string, PromptAttack> = {
+  "claude-basics": {
+    scenario:
+      "The Hallucinator is mid-collapse over a one-line bug report — \"my code is broken, please fix it\" — and has already guessed two different broken causes, wrong both times. Write the prompt that actually gets it fixed, first try.",
+    placeholder: "",
+    criteria: [
+      { needle: "expected", power: 1, label: "States what the code should do" },
+      { needle: "actual", power: 1, label: "States what it's actually doing" },
+      { needle: "```", power: 1, label: "Includes the code itself, not just a description" },
+      { needle: "largest", power: 1, label: "Names the specific bug — the largest-number mixup" },
+    ],
+    maxDamage: 4,
+  },
+  "prompt-engineering": {
+    scenario:
+      "The Prompt Mangler only understands one shape of request — \"write me a blog post about {topic}\" — and gives wildly different results every time it runs. Write the prompt that locks it down for good.",
+    placeholder: "",
+    criteria: [
+      { needle: "{topic}", power: 1, label: "Keeps a reusable {topic} placeholder" },
+      { needle: "tone", power: 1, label: "Specifies a tone" },
+      { needle: "audience", power: 1, label: "Names the audience" },
+      { needle: "format", power: 1, label: "States the output format" },
+    ],
+    maxDamage: 4,
+  },
+  "claude-code": {
+    scenario:
+      "The Context Kraken is a subagent with zero memory of this conversation, about to rename oldName to newName across the whole repo, blind. Write the task prompt that keeps it from wrecking the codebase.",
+    placeholder: "",
+    criteria: [
+      { needle: "goal", power: 1, label: "States the goal" },
+      { needle: "scope", power: 1, label: "Defines the scope — which files" },
+      { needle: "report", power: 1, label: "Says what to report back" },
+      { needle: "oldname", power: 1, label: "Names the actual symbol being renamed" },
+    ],
+    maxDamage: 4,
+  },
+  git: {
+    scenario:
+      "The Merge Conflict has production broken on main and no patience for vague vibes. Write the prompt that spells out the exact fix — branch, commit, merge.",
+    placeholder: "",
+    criteria: [
+      { needle: "branch", power: 1, label: "Mentions branching first" },
+      { needle: "commit", power: 1, label: "Mentions committing the fix" },
+      { needle: "main", power: 1, label: "Names main as the target" },
+      { needle: "merge", power: 1, label: "Mentions merging it back" },
+    ],
+    maxDamage: 4,
+  },
+  react: {
+    scenario:
+      "The Infinite Rerender is stuck refetching the same user on every single render. Write the prompt that gets the fix — and the reason for it — in one shot.",
+    placeholder: "",
+    criteria: [
+      { needle: "useeffect", power: 1, label: "Names useEffect specifically" },
+      { needle: "dependency", power: 1, label: "Mentions the dependency array" },
+      { needle: "userid", power: 1, label: "Names the value that should trigger a refetch" },
+      { needle: "why", power: 1, label: "Asks for the reasoning, not just the fix" },
+    ],
+    maxDamage: 4,
+  },
+};
+
+function fallbackPromptAttack(world: WorldDefinition): PromptAttack {
+  const topic = world.title.toLowerCase();
+  return {
+    scenario: `Write a prompt that would actually get useful, specific help with ${world.title} — not just "explain ${world.title}."`,
+    placeholder: "",
+    criteria: [
+      { needle: "goal", power: 1, label: "States a concrete goal" },
+      { needle: "context", power: 1, label: "Gives real context, not just a topic name" },
+      { needle: "example", power: 1, label: "Includes a concrete example" },
+      { needle: topic, power: 1, label: `Names ${world.title} specifically` },
+    ],
+    maxDamage: 4,
+  };
+}
+
+function buildPromptAttack(world: WorldDefinition): PromptAttack {
+  return PROMPT_ATTACK_SPECS[world.slug] ?? fallbackPromptAttack(world);
+}
 
 /**
  * The "Ship It" finale: a hand-authored project brief per world. There is no
@@ -412,10 +537,13 @@ function buildProject(world: WorldDefinition, nodeId: string): BossProject {
   };
 }
 
-/** A project stage has no LessonStep content of its own, but still counts as
- * one attack against the boss's HP, same as any other step. */
+/** A project or prompt stage has no LessonStep content of its own — a
+ * project is worth a flat 1 HP like any other step, while a prompt stage is
+ * worth its full possible damage, since damage dealt there is variable. */
 export function stageAttacks(stage: BossStage): number {
-  return stage.kind === "project" ? 1 : stage.steps.length;
+  if (stage.kind === "project") return 1;
+  if (stage.kind === "prompt") return stage.promptAttack?.maxDamage ?? 0;
+  return stage.steps.length;
 }
 
 const FALLBACK_EPITHETS = [
@@ -501,6 +629,15 @@ export function getBossBattle(nodeId: string): BossBattle | null {
   const combatStages = buildStages(session.steps);
   const totalCombatSteps = combatStages.reduce((n, s) => n + s.steps.length, 0);
 
+  // The opener: no multiple choice, no options — write the actual prompt.
+  const promptStage: BossStage = {
+    title: "Opening Strike",
+    intro: "No options to pick from. Write the real prompt — power in, damage out.",
+    steps: [],
+    kind: "prompt",
+    promptAttack: buildPromptAttack(world),
+  };
+
   const project = buildProject(world, nodeId);
   const projectStage: BossStage = {
     title: "Ship It",
@@ -511,17 +648,19 @@ export function getBossBattle(nodeId: string): BossBattle | null {
     steps: [],
     kind: "project",
   };
-  const stages = [...combatStages, projectStage];
+  const stages = [promptStage, ...combatStages, projectStage];
 
-  // Coding takes longer than a quiz question — the project earns extra clock.
+  // Coding takes longer than a quiz question — the project earns extra
+  // clock, and so does writing an actual prompt instead of picking one.
   const projectTimeBonus = project.size === "big" ? 180 : 90;
+  const promptTimeBonus = 60;
 
   return {
     nodeId,
     worldSlug,
     worldTitle: world.title,
     ...bossIdentity(worldSlug, world.title, world.order),
-    timeLimitSeconds: totalCombatSteps * 45 + projectTimeBonus,
+    timeLimitSeconds: totalCombatSteps * 45 + promptTimeBonus + projectTimeBonus,
     xpReward: 250,
     gemReward: 10,
     stages,

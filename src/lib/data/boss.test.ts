@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { WORLDS } from "@/lib/gamification/worlds";
-import { evaluateProject, getBossBattle, isBossNode } from "./boss";
+import { evaluateProject, evaluatePromptPower, getBossBattle, isBossNode } from "./boss";
 
 describe("boss battles", () => {
   it("recognizes exactly the last node of each world as a boss", () => {
@@ -25,13 +25,60 @@ describe("boss battles", () => {
       expect(steps.length).toBeGreaterThan(0);
       expect(steps.every((s) => s.type !== "flashcard")).toBe(true);
 
-      // Combat stages are timed at 45s/attack; the Ship It project stage
-      // earns extra clock instead (coding takes longer than a quiz answer).
+      // Combat stages are timed at 45s/attack; the Ship It project stage and
+      // the opening prompt attack both earn extra clock instead.
       const combatSteps = battle!.stages
         .slice(0, -1)
         .reduce((n, s) => n + s.steps.length, 0);
       const projectBonus = battle!.project.size === "big" ? 180 : 90;
-      expect(battle!.timeLimitSeconds).toBe(combatSteps * 45 + projectBonus);
+      expect(battle!.timeLimitSeconds).toBe(combatSteps * 45 + 60 + projectBonus);
+    }
+  });
+
+  it("opens every boss with a write-your-own-prompt attack, not multiple choice", () => {
+    for (const world of WORLDS) {
+      const battle = getBossBattle(`${world.slug}-${world.lessonCount - 1}`)!;
+      const first = battle.stages[0];
+      expect(first.kind).toBe("prompt");
+      // No scripted lesson steps (and definitely no multiple_choice) — the
+      // player writes free text, there's nothing to pick from.
+      expect(first.steps).toHaveLength(0);
+
+      const attack = first.promptAttack!;
+      expect(attack.scenario.length).toBeGreaterThan(0);
+      expect(attack.criteria.length).toBeGreaterThan(0);
+      expect(attack.maxDamage).toBe(
+        attack.criteria.reduce((n, c) => n + c.power, 0),
+      );
+      // A blank submission lands zero damage — there's no free credit.
+      expect(evaluatePromptPower(attack.placeholder, attack.criteria).damage).toBe(0);
+    }
+  });
+
+  it("scales prompt-attack damage with how many criteria are met", () => {
+    for (const world of WORLDS) {
+      const attack = getBossBattle(`${world.slug}-${world.lessonCount - 1}`)!.stages[0]
+        .promptAttack!;
+
+      // Every criterion present deals full damage.
+      const perfect = attack.criteria.map((c) => c.needle).join(" ");
+      const full = evaluatePromptPower(perfect, attack.criteria);
+      expect(full.damage).toBe(attack.maxDamage);
+      expect(full.missed).toHaveLength(0);
+
+      // Missing exactly one criterion deals proportionally less — never all
+      // or nothing, unlike a multiple-choice question.
+      if (attack.criteria.length > 1) {
+        const partial = attack.criteria
+          .slice(1)
+          .map((c) => c.needle)
+          .join(" ");
+        const result = evaluatePromptPower(partial, attack.criteria);
+        expect(result.damage).toBe(attack.maxDamage - attack.criteria[0].power);
+        expect(result.damage).toBeGreaterThan(0);
+        expect(result.damage).toBeLessThan(attack.maxDamage);
+        expect(result.missed).toEqual([attack.criteria[0]]);
+      }
     }
   });
 

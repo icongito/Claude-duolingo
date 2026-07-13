@@ -22,6 +22,7 @@ import { Card } from "@/components/ui/card";
 import { LittleGuy } from "@/components/mascot/little-guy";
 import { stageAttacks, type BossBattle } from "@/lib/data/boss";
 import { BossProjectStage } from "./boss-project-stage";
+import { BossPromptAttackStage } from "./boss-prompt-attack";
 import { StepRenderer } from "./lesson-player";
 import { cn } from "@/lib/utils";
 
@@ -81,13 +82,15 @@ export function BossPlayer({ battle }: { battle: BossBattle }) {
   const [attempts, setAttempts] = useState(0);
   const [defeatReason, setDefeatReason] = useState<"hearts" | "time">("hearts");
   const [combatFx, setCombatFx] = useState<{ kind: "hit" | "miss"; id: number } | null>(null);
+  const [damageDealt, setDamageDealt] = useState(0);
   const fxId = useRef(0);
 
+  // Damage is tracked directly rather than derived from step position — a
+  // prompt attack can deal anywhere from 0 up to its max in one hit, so
+  // "how far you've walked through the stages" no longer implies "how much
+  // HP is gone."
   const maxHp = battle.stages.reduce((n, s) => n + stageAttacks(s), 0);
-  const cleared =
-    battle.stages.slice(0, stageIndex).reduce((n, s) => n + stageAttacks(s), 0) +
-    stepIndex;
-  const bossHp = maxHp - cleared;
+  const bossHp = maxHp - damageDealt;
   const stage = battle.stages[stageIndex];
   const fighting = phase === "stage" || phase === "playing";
 
@@ -128,36 +131,64 @@ export function BossPlayer({ battle }: { battle: BossBattle }) {
     setTimeLeft(battle.timeLimitSeconds);
     setAttempts(0);
     setCombatFx(null);
+    setDamageDealt(0);
     setPhase("intro");
   }
 
-  // A missed attack doesn't advance: the step remounts (via the attempt
-  // counter in its key) and must be landed before the boss loses that HP.
-  function handleResult(correct: boolean) {
+  function triggerFx(kind: "hit" | "miss") {
     fxId.current += 1;
-    setCombatFx({ kind: correct ? "hit" : "miss", id: fxId.current });
-    if (!correct) {
-      const next = hearts - 1;
-      setHearts(next);
-      setAttempts((a) => a + 1);
-      if (next <= 0) {
-        setDefeatReason("hearts");
-        setPhase("defeat");
-      }
-      return;
+    setCombatFx({ kind, id: fxId.current });
+  }
+
+  // A missed attack costs a heart and doesn't advance — the step remounts
+  // (via the attempt counter in its key) and must be landed to do damage.
+  function loseHeart() {
+    const next = hearts - 1;
+    setHearts(next);
+    setAttempts((a) => a + 1);
+    if (next <= 0) {
+      setDefeatReason("hearts");
+      setPhase("defeat");
     }
-    if (stepIndex + 1 < stage.steps.length) {
-      setStepIndex((i) => i + 1);
-    } else if (stage.kind === "project") {
-      // Ship It is always the last stage — clearing it publishes, then wins.
-      setPhase("publishing");
-    } else if (stageIndex + 1 < battle.stages.length) {
+  }
+
+  function advanceStage() {
+    if (stageIndex + 1 < battle.stages.length) {
       setStageIndex((i) => i + 1);
       setStepIndex(0);
       setPhase("stage");
     } else {
       setPhase("victory");
     }
+  }
+
+  function handleResult(correct: boolean) {
+    triggerFx(correct ? "hit" : "miss");
+    if (!correct) {
+      loseHeart();
+      return;
+    }
+    setDamageDealt((d) => d + 1);
+    if (stepIndex + 1 < stage.steps.length) {
+      setStepIndex((i) => i + 1);
+    } else if (stage.kind === "project") {
+      // Ship It is always the last stage — clearing it publishes, then wins.
+      setPhase("publishing");
+    } else {
+      advanceStage();
+    }
+  }
+
+  // The prompt attack deals variable damage instead of a fixed hit — zero
+  // damage (nothing in the prompt landed) is treated exactly like a miss.
+  function handlePromptResult(damage: number) {
+    triggerFx(damage > 0 ? "hit" : "miss");
+    if (damage <= 0) {
+      loseHeart();
+      return;
+    }
+    setDamageDealt((d) => d + damage);
+    advanceStage();
   }
 
   if (phase === "intro") {
@@ -176,7 +207,7 @@ export function BossPlayer({ battle }: { battle: BossBattle }) {
           <p className="text-muted-foreground max-w-md">{battle.tagline}</p>
           <div className="text-muted-foreground flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm">
             <span className="flex items-center gap-1.5">
-              <Swords className="size-4" /> {battle.stages.length} stages · {maxHp} attacks
+              <Swords className="size-4" /> {battle.stages.length} stages · {maxHp} HP
             </span>
             <span className="flex items-center gap-1.5">
               <Timer className="size-4" /> {formatClock(battle.timeLimitSeconds)} on the clock
@@ -437,7 +468,9 @@ export function BossPlayer({ battle }: { battle: BossBattle }) {
             Stage {stageIndex + 1}: {stage.title}
             {stage.kind === "project"
               ? " · build the project"
-              : ` · attack ${stepIndex + 1} of ${stage.steps.length}`}
+              : stage.kind === "prompt"
+                ? " · write the prompt"
+                : ` · attack ${stepIndex + 1} of ${stage.steps.length}`}
           </p>
           <AnimatePresence mode="wait">
             <motion.div
@@ -449,6 +482,8 @@ export function BossPlayer({ battle }: { battle: BossBattle }) {
             >
               {stage.kind === "project" ? (
                 <BossProjectStage brief={battle.project.brief} onResult={handleResult} />
+              ) : stage.kind === "prompt" ? (
+                <BossPromptAttackStage attack={stage.promptAttack!} onResult={handlePromptResult} />
               ) : (
                 <StepRenderer step={stage.steps[stepIndex]} onResult={handleResult} />
               )}
